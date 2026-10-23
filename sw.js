@@ -1,6 +1,6 @@
 /* Il mio bilancio - service worker: l'app si apre anche senza connessione.
    I dati arrivano sempre dal Foglio Google (mai messi in cache qui: l'app tiene da sola una copia dell'ultima apertura). */
-const VERSION = 'bilancio-v3';
+const VERSION = 'bilancio-v4';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './maskable-512.png', './apple-touch-icon.png'];
 
 self.addEventListener('install', e => {
