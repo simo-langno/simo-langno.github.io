@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1D4ED8">
+<meta name="description" content="Spese, entrate, conti, budget e previsioni: i tuoi dati nel tuo account Google, su tutti i dispositivi.">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Bilancio">
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="../icon-192.png">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<title>Il mio bilancio</title>
+<style>
+html,body{margin:0;background:#EEF3FF}
+@media (prefers-color-scheme: dark){html,body{background:#0B1020}}
+#boot{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;font-family:system-ui,sans-serif;color:#566080;font-size:15px;text-align:center;padding:24px}
+#boot img{width:72px;height:72px;border-radius:18px;display:block;margin:0 auto 14px}
+#setup{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;padding:24px;background:linear-gradient(160deg,#1D4ED8,#22B8F0);font-family:system-ui,sans-serif;color:#141A33}
+#setup .box{width:100%;max-width:460px;background:#FFFFFF;border-radius:24px;padding:26px 22px;box-shadow:0 20px 50px rgba(10,20,80,.3)}
+#setup img{width:64px;height:64px;border-radius:16px;display:block}
+#setup h1{font-size:23px;margin:16px 0 6px}
+#setup p{margin:0 0 14px;font-size:15px;line-height:1.5;color:#566080}
+#setup textarea{width:100%;box-sizing:border-box;min-height:92px;border:1px solid #DFE5F5;border-radius:14px;padding:12px;font:14px/1.4 ui-monospace,Menlo,monospace;resize:vertical;background:#F4F7FF;color:#141A33}
+#setup button{margin-top:10px;width:100%;height:52px;border:0;border-radius:16px;background:#1D4ED8;color:#fff;font:700 16px system-ui,sans-serif;cursor:pointer}
+#setup button.sec{background:transparent;color:#1D4ED8;height:44px}
+#setup button[disabled]{opacity:.6}
+#setup .err{color:#C81E3A;font-size:14px;min-height:20px;margin:10px 0 0}
+@media (prefers-color-scheme: dark){#setup{background:linear-gradient(160deg,#14256B,#0F3D8C)}#setup .box{background:#161D36;color:#F2F5FF}#setup p{color:#AAB4D6}#setup textarea{background:#111830;border-color:#263056;color:#F2F5FF}#setup .err{color:#FF6B80}#setup button.sec{color:#8FB0FF}}
+</style>
+</head>
+<body>
+<div id="boot"><div><img src="../icon-192.png" alt=""><span id="bootmsg">Apertura del bilancio…</span></div></div>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script>
+/* Riepilogo per i widget: stessi calcoli dello script Google di prima, ora eseguiti nell'app. */
+var WD_MESI=['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+var WD_MB=['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
+var WD_COLORI={red:'#E0352B',wine:'#A3201B',orange:'#F07B2C',amber:'#E3A21A',olive:'#A39321',lime:'#7CB342',green:'#2E9B5B',teal:'#3FB8A8',cyan:'#1EA5C9',sky:'#3FB4EE',blue:'#2F7AE0',indigo:'#4B55C8',violet:'#7A4CC8',purple:'#9C3FB3',pink:'#E04F8B',brown:'#8B5E3C',slate:'#5B6B7A'};
+function wd_pad(n){return String(n).padStart(2,'0')}
+function wd_iso(d){return d.getFullYear()+'-'+wd_pad(d.getMonth()+1)+'-'+wd_pad(d.getDate())}
+function wd_eur(v,signed){var neg=v<0;var s=Math.abs(Math.round(v*100)/100).toFixed(2).split('.');s[0]=s[0].replace(/\B(?=(\d{3})+(?!\d))/g,'.');return(neg?'−':(signed&&v>0?'+':''))+s[0]+','+s[1]+' €'}
+function wd_eur0(v){return(v<0?'−':'')+String(Math.abs(Math.round(v))).replace(/\B(?=(\d{3})+(?!\d))/g,'.')+' €'}
+function wd_next(r,d){var n=Math.max(1,Number(r.ev)||1),p=String(d).split('-').map(Number);
+  if(r.fq==='d'||r.fq==='w')return wd_iso(new Date(p[0],p[1]-1,p[2]+(r.fq==='w'?7*n:n),12));
+  var months=r.fq==='y'?12*n:n,tm=p[1]-1+months;var yy=p[0]+Math.floor(tm/12),mm=((tm%12)+12)%12,dim=new Date(yy,mm+1,0).getDate();
+  return wd_iso(new Date(yy,mm,Math.min(r.g||p[2],dim),12))}
+function wd_budget(items,cfg,today){
+  var mk=today.slice(0,7),y=Number(today.slice(0,4)),mo=Number(today.slice(5,7));
+  var start=mk+'-01',end=wd_iso(new Date(y,mo,0,12));
+  var cb=cfg.budget||{},over=Number((cfg.budgetMesi||{})[mk])||0,gen=Number(cfg.budgetMese)||0;
+  var tot=over>0?over:gen,mode=tot>0?'totale':'';
+  if(!mode){for(var k in cb)if(Number(cb[k])>0)tot+=Number(cb[k]);if(tot>0)mode='categorie'}
+  var counts=function(c){return mode==='totale'||Number(cb[c])>0};
+  var spent=0,planned=0;
+  if(mode){
+    for(var id in items){var x=items[id];if(x.t!=='S'||!x.d||x.d<start||x.d>end||!counts(x.c))continue;if(x.d<=today)spent+=x.v;else planned+=x.v}
+    (cfg.ric||[]).forEach(function(r){if(r.t!=='S'||!r.next||!(Number(r.v)>0)||!counts(r.c))return;var d=r.next,n=0;while(d<=end&&n<400){if(d>=start)planned+=Number(r.v);d=wd_next(r,d);n++}})
+  }
+  return{mode:mode,tot:Math.round(tot*100)/100,spent:Math.round(spent*100)/100,planned:Math.round(planned*100)/100}}
+function wd_data(items,cfg,now,conti){
+  cfg=cfg||{};var today=wd_iso(now);
+  var y=Number(today.slice(0,4)),mo=Number(today.slice(5,7)),dd=Number(today.slice(8,10));
+  var monthKey=today.slice(0,7),dim=new Date(y,mo,0).getDate();
+  var wdy=(new Date(y,mo-1,dd).getDay()+6)%7;
+  var weekStart=wd_iso(new Date(y,mo-1,dd-wdy,12));
+  var budget=cfg.budget||{},accs=cfg.accs||[],widget=cfg.widget||{};
+  var visible=accs.filter(function(a){return!a.h});
+  var sel=[];var want=String(conti||'').trim();
+  if(want&&want.toLowerCase()!=='tutti'){want.split(',').forEach(function(w){w=w.trim().toLowerCase();accs.forEach(function(a){if(a.n.toLowerCase()===w&&sel.indexOf(a)<0)sel.push(a)})})}
+  if(!sel.length&&widget.conti&&widget.conti.length)accs.forEach(function(a){if(widget.conti.indexOf(a.n)>=0)sel.push(a)});
+  if(!sel.length)sel=visible.slice();
+  var single=sel.length===1?sel[0].n:null;
+  var bal={};accs.forEach(function(a){bal[a.n]=Number(a.init)||0});
+  var E=0,U=0,oggi=0,sett=0,cat={},last=null;
+  for(var id in items){var x=items[id];if(!x.d||x.d>today)continue;
+    if(x.t==='E')bal[x.a]=(bal[x.a]||0)+x.v;else if(x.t==='S')bal[x.a]=(bal[x.a]||0)-x.v;else{bal[x.a]=(bal[x.a]||0)-x.v;bal[x.to]=(bal[x.to]||0)+x.v}
+    if(x.t==='T'||(single&&x.a!==single))continue;
+    if(x.t==='S'&&x.d===today)oggi+=x.v;
+    if(x.t==='S'&&x.d>=weekStart)sett+=x.v;
+    if(x.d.slice(0,7)===monthKey){if(x.t==='E')E+=x.v;if(x.t==='S'){U+=x.v;cat[x.c]=(cat[x.c]||0)+x.v}}
+    if(!last||x.d>last.d||(x.d===last.d&&(x.ts||0)>(last.ts||0)))last=x}
+  var bi=wd_budget(items,cfg,today);
+  var bTot=bi.tot,bSpent=bi.spent,left=Math.round((bTot-bSpent-bi.planned)*100)/100,daysLeft=dim-dd+1;
+  var ratio=bTot?(bSpent+bi.planned)/bTot:0,paceRatio=bTot?bSpent/bTot:0,pace=dd/dim;
+  var state=!bTot?'nessuno':ratio>1?'superato':(ratio>=0.9||paceRatio>pace+0.15)?'attenzione':'ok';
+  var stateColor={ok:'#1C7C4B',attenzione:'#B26B0E',superato:'#C23A2F',nessuno:'#5B6B7A'};
+  var pct=Math.max(0,Math.min(100,Math.round(ratio*100)));
+  var totVisible=0;visible.forEach(function(a){totVisible+=bal[a.n]||0});
+  var totSel=0,lines=[];
+  sel.forEach(function(a){totSel+=bal[a.n]||0;lines.push(a.n+'  '+wd_eur(bal[a.n]||0))});
+  if(sel.length>1&&widget.totale!==false)lines.push('Totale  '+wd_eur(totSel));
+  var top=Object.keys(cat).map(function(k){return[k,cat[k]]}).sort(function(a,b){return b[1]-a[1]});
+  var selSet={};sel.forEach(function(a){selSet[a.n]=true});
+  var delta=function(x){if(x.t==='E')return selSet[x.a]?x.v:0;if(x.t==='S')return selSet[x.a]?-x.v:0;return(selSet[x.to]?x.v:0)-(selSet[x.a]?x.v:0)};
+  var monthEnd=wd_iso(new Date(y,mo,0,12)),horizon=wd_iso(new Date(y,mo-1,dd+62,12));
+  var planned=[];
+  for(var fid in items){var f=items[fid];if(f.d&&f.d>today&&f.d<=horizon)planned.push(f)}
+  (cfg.ric||[]).forEach(function(r){if(!r.next||!(Number(r.v)>0))return;var d=r.next,k=0;while(d<=horizon&&k<400){planned.push({d:d,t:r.t,c:r.c,a:r.a,to:'',v:Number(r.v),n:r.n||''});d=wd_next(r,d);k++}});
+  planned=planned.filter(function(x){return delta(x)!==0});
+  planned.sort(function(a,b){return a.d<b.d?-1:a.d>b.d?1:0});
+  var proj=totSel,nMese=0;
+  planned.forEach(function(x){if(x.d<=monthEnd){proj+=delta(x);if(x.d>today)nMese++}});
+  var upcoming=planned.filter(function(x){return x.d>today});
+  var label=function(x){return x.n||(x.t==='T'?x.a+' → '+x.to:x.c)};
+  var when=function(x){return Number(x.d.slice(8,10))+' '+WD_MB[Number(x.d.slice(5,7))-1]};
+  var out={ok:true,aggiornato:wd_pad(now.getDate())+'/'+wd_pad(now.getMonth()+1)+' '+wd_pad(now.getHours())+':'+wd_pad(now.getMinutes()),
+    etichetta:single?single:(sel.length===visible.length?'Tutti i conti':sel.map(function(a){return a.n}).join(' + ')),
+    conti_n:sel.length,conti_totale:wd_eur(totSel),conti_totale_breve:wd_eur0(totSel),conti_testo:lines.join('\n'),
+    totale:wd_eur(totVisible),patrimonio:wd_eur(totVisible),mese:WD_MESI[mo-1]+' '+y,
+    entrate:wd_eur(E),spese:wd_eur(U),saldo:wd_eur(E-U,true),saldo_negativo:E-U<0?1:0,oggi:wd_eur(oggi),settimana:wd_eur(sett),
+    budget:wd_eur0(bTot),budget_speso:wd_eur(bSpent),budget_rimasto:wd_eur(left),
+    budget_testo:!bTot?'Nessun budget':(left>=0?'Restano '+wd_eur(left):'Superato di '+wd_eur(-left)),
+    budget_pct:pct,budget_rimasto_pct:bTot?100-pct:0,budget_ritmo_pct:Math.round(pace*100),
+    budget_stato:state,budget_colore:stateColor[state],
+    al_giorno:left>0?wd_eur(left/daysLeft)+' al giorno':'0,00 € al giorno',giorni_rimasti:daysLeft,
+    budget_impostato:bTot?1:0,budget_mese:'Budget di '+WD_MESI[mo-1].toLowerCase(),
+    budget_titolo:!bTot?'Nessun budget':(left>=0?'Restano':'Superato di'),budget_valore:bTot?wd_eur(Math.abs(left)):'–',
+    budget_rimasto_breve:wd_eur0(left),
+    budget_sotto:bTot?wd_eur(bSpent)+' spesi'+(bi.planned>0?' + '+wd_eur(bi.planned)+' previsti':'')+' su '+wd_eur0(bTot):"Imposta il budget nell'app",
+    budget_riga:!bTot?'':(left>0?wd_eur(left/daysLeft)+' al giorno · '+daysLeft+(daysLeft===1?' giorno':' giorni'):'Budget del mese finito'),
+    budget_previsto:wd_eur(bi.planned),budget_dopo_previste:wd_eur(left),
+    ultimo:last?(last.c+' '+(last.t==='E'?'+':'−')+wd_eur(last.v)+' · '+Number(last.d.slice(8,10))+' '+WD_MB[Number(last.d.slice(5,7))-1]):'',
+    previsto_fine_mese:wd_eur(proj),previsto_fine_mese_breve:wd_eur0(proj),previsti_mese:nMese,
+    prossimo:upcoming.length?label(upcoming[0])+' '+wd_eur(delta(upcoming[0]),true)+' · '+when(upcoming[0]):'Nessun movimento previsto',
+    prossimi_testo:upcoming.slice(0,3).map(function(x){return when(x)+'  '+label(x)+'  '+wd_eur(delta(x),true)}).join('\n')};
+  for(var i=0;i<6;i++){var a=sel[i];out['c'+(i+1)+'_nome']=a?a.n:'';out['c'+(i+1)+'_saldo']=a?wd_eur(bal[a.n]||0):'';out['c'+(i+1)+'_colore']=a?(WD_COLORI[a.k]||'#5B6B7A'):'#00000000'}
+  for(var j=0;j<3;j++){out['cat'+(j+1)+'_nome']=top[j]?top[j][0]:'';out['cat'+(j+1)+'_valore']=top[j]?wd_eur(top[j][1]):'';out['cat'+(j+1)+'_pct']=top[j]&&U?Math.round(top[j][1]/U*100):0}
+  return out}
+/* Un solo documento per tutti i widget: dati del budget + una variante per ogni scelta di conti. */
+function wd_key(names){return names.map(function(n){return String(n).trim().toLowerCase()}).sort().join('|')}
+function wd_summary(items,cfg,now){
+  var def=wd_data(items,cfg,now,'');
+  var BF=['budget_mese','budget_impostato','budget_stato','budget_titolo','budget_valore','budget_sotto','giorni_rimasti','al_giorno','budget_pct','budget_colore'];
+  var VF=['etichetta','conti_n','conti_totale','conti_testo','saldo','previsto_fine_mese_breve'];
+  var pick=function(o,f){var r={};f.forEach(function(k){r[k]=o[k]});return r};
+  var names=[];for(var i=1;i<=6;i++){if(def['c'+i+'_nome'])names.push(def['c'+i+'_nome'])}
+  var S={u:def.aggiornato,b:pick(def,BF),c:names.map(function(n,i){return{n:n,s:def['c'+(i+1)+'_saldo']}}),v:{'*':pick(def,VF)}};
+  var total=(1<<names.length)-1;
+  for(var m=1;m<=total;m++){var sub=[];for(var b=0;b<names.length;b++)if(m&(1<<b))sub.push(names[b]);
+    S.v[wd_key(sub)]=pick(wd_data(items,cfg,now,sub.join(',')),VF)}
+  return S}
+
+
+</script>
+<script>
+/* Il mio bilancio: accesso con Google, dati nel tuo spazio privato su Firebase (Firestore), copia offline sul dispositivo. */
+(function(){
+  var FB={apiKey:"AIzaSyB__ivbP9WfeXjy996R9fpZi8h35RcCI9M",authDomain:"il-mio-bilancio-9ddb8.firebaseapp.com",projectId:"il-mio-bilancio-9ddb8",storageBucket:"il-mio-bilancio-9ddb8.firebasestorage.app",messagingSenderId:"704824820388",appId:"1:704824820388:web:074e9e5dc9154c1f0a5c31"};
+  var CONN='bil.conn',NOIMP='bil.noimp';
+  function ls(k,v){try{if(v===undefined)return localStorage.getItem(k);if(v===null)localStorage.removeItem(k);else localStorage.setItem(k,v)}catch(e){return null}}
+  function bootMsg(t){var b=document.getElementById('bootmsg');if(b)b.textContent=t}
+  window.__bilPWA=false;
+  if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('./sw.js').catch(function(){})})}
+  if(!window.firebase){bootMsg('Non riesco a caricare i componenti dell\'app: controlla la connessione e riprova.');return}
+  firebase.initializeApp(FB);
+  var auth=firebase.auth(),db=firebase.firestore(),FV=firebase.firestore.FieldValue;
+  try{db.settings({ignoreUndefinedProperties:true})}catch(e){}
+
+  /* ---------- finestre semplici ---------- */
+  function sheet(html){var d=document.getElementById('setup');if(d)d.remove();d=document.createElement('div');d.id='setup';d.innerHTML='<div class="box"><img src="../icon-192.png" alt="">'+html+'</div>';document.body.appendChild(d);return d}
+  function closeSheet(){var d=document.getElementById('setup');if(d)d.remove()}
+  function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+
+  /* ---------- accesso ---------- */
+  function login(msg){return new Promise(function(res){
+    var boot=document.getElementById('boot');if(boot)boot.remove();
+    var d=sheet('<h1>Il mio bilancio</h1><p>Accedi con il tuo account Google: i tuoi dati restano privati, si sincronizzano su tutti i tuoi dispositivi e funzionano anche senza connessione.</p><button id="go" type="button">Accedi con Google</button><p class="err" id="err" role="alert">'+esc(msg||'')+'</p>');
+    d.querySelector('#go').addEventListener('click',function(){
+      var b=this,err=d.querySelector('#err');b.disabled=true;err.textContent='';
+      var prov=new firebase.auth.GoogleAuthProvider();prov.setCustomParameters({prompt:'select_account'});
+      auth.signInWithPopup(prov).then(function(r){res(r.user)},function(e){
+        var c=e&&e.code||'';
+        if(c==='auth/popup-blocked'||c==='auth/operation-not-supported-in-this-environment'){auth.signInWithRedirect(prov);return}
+        b.disabled=false;
+        err.textContent=c==='auth/popup-closed-by-user'||c==='auth/cancelled-popup-request'?'Accesso annullato.':c==='auth/unauthorized-domain'?'Questo indirizzo non è autorizzato per l\'accesso Google.':c==='auth/network-request-failed'?'Nessuna connessione: riprova.':'Accesso non riuscito'+(c?' ('+c+')':'')+'.'})})})}
+  function firstUser(){return new Promise(function(res){var un=auth.onAuthStateChanged(function(u){un();res(u)})})}
+
+  /* ---------- dati ---------- */
+  var U=null,ST={items:{},inv:{},cfg:null,wid:null},CK='bil.cache.';
+  function mk(d){return String(d||'').slice(0,7)||'0000-00'}
+  function uref(){return db.collection('users').doc(U.uid)}
+  function txRef(m){return uref().collection('tx').doc(m)}
+  function metaRef(n){return uref().collection('meta').doc(n)}
+  function clean(it){return{d:String(it.d||''),t:it.t||'S',c:it.c||'',a:it.a||'',to:it.to||'',v:Math.round(Number(it.v)*100)/100||0,n:it.n||'',g:it.g||'',ts:Number(it.ts)||Date.now()}}
+  function later(ms){return new Promise(function(r){setTimeout(function(){r('t')},ms)})}
+  /* scrive subito in locale; senza connessione la scrittura resta in coda e parte da sola */
+  function commit(batch,wait){var p=batch.commit();p.catch(function(e){console.warn('scrittura',e);try{window.__bilWriteErr&&window.__bilWriteErr(e)}catch(_){}});
+    return wait?p:Promise.race([p,later(1500)])}
+  async function load(){
+    var r=await Promise.all([uref().collection('tx').get(),uref().collection('inv').get(),metaRef('cfg').get()]);
+    var items={};r[0].forEach(function(d){var it=(d.data()||{}).items||{};for(var k in it)items[k]=it[k]});
+    var inv={};r[1].forEach(function(d){inv[d.id]=d.data()});
+    var cfg=null;if(r[2].exists){try{cfg=JSON.parse(r[2].data().json)}catch(e){cfg=null}}
+    ST.items=items;ST.inv=inv;ST.cfg=cfg}
+  var OPS={
+    getData:async function(){await load();schedulePublish();return JSON.stringify({items:ST.items,inv:ST.inv,cfg:ST.cfg})},
+    saveItems:function(json){return saveItems(JSON.parse(json),false)},
+    deleteItems:async function(json){
+      var ids=JSON.parse(json),by={};
+      ids.forEach(function(id){var o=ST.items[id];if(!o)return;var m=mk(o.d);(by[m]=by[m]||{})[id]=FV.delete();delete ST.items[id]});
+      var b=db.batch();Object.keys(by).forEach(function(m){b.set(txRef(m),{items:by[m]},{merge:true})});
+      await commit(b);schedulePublish();return true},
+    saveCfg:async function(json){ST.cfg=typeof json==='string'?JSON.parse(json):json;
+      var b=db.batch();b.set(metaRef('cfg'),{json:typeof json==='string'?json:JSON.stringify(json),t:Date.now()});await commit(b);schedulePublish();return true},
+    saveInv:async function(json){var it=JSON.parse(json),id=String(it.id);delete it.id;ST.inv[id]=it;
+      var b=db.batch();b.set(uref().collection('inv').doc(id),it);await commit(b);return true},
+    deleteInv:async function(id){delete ST.inv[id];var b=db.batch();b.delete(uref().collection('inv').doc(String(id)));await commit(b);return true},
+    getAccount:async function(){var w=null;try{w=await ensureWid()}catch(e){}return{email:U.email||'',wid:w,old:!!oldConn()}},
+    importOld:function(){return importOld()},
+    logout:async function(){try{await auth.signOut()}catch(e){}ls(CK+U.uid,null);try{await db.terminate();await db.clearPersistence()}catch(e){}location.reload()}
+  };
+  async function saveItems(arr,wait,skipExisting){
+    var by={},n=0;
+    arr.forEach(function(it){var id=String(it.id);if(skipExisting&&ST.items[id])return;var c=clean(it),m=mk(c.d),o=ST.items[id];
+      (by[m]=by[m]||{})[id]=c;n++;
+      if(o&&mk(o.d)!==m){var om=mk(o.d);(by[om]=by[om]||{})[id]=FV.delete()}
+      ST.items[id]=c});
+    var keys=Object.keys(by);
+    for(var i=0;i<keys.length;i+=200){var b=db.batch();keys.slice(i,i+200).forEach(function(m){b.set(txRef(m),{items:by[m]},{merge:true})});await commit(b,wait)}
+    schedulePublish();return wait?n:true}
+  /* ---------- riepilogo per i widget ---------- */
+  var ALF='abcdefghijkmnpqrstuvwxyz23456789';
+  async function ensureWid(){
+    if(ST.wid)return ST.wid;
+    var s=await metaRef('widget').get();
+    if(s.exists&&s.data().wid){ST.wid=s.data().wid;return ST.wid}
+    var a=new Uint8Array(24);crypto.getRandomValues(a);var w='';for(var i=0;i<a.length;i++)w+=ALF[a[i]&31];
+    await metaRef('widget').set({wid:w});ST.wid=w;return w}
+  var pubT=null;
+  function schedulePublish(){clearTimeout(pubT);pubT=setTimeout(publish,2500)}
+  async function publish(){
+    try{var w=await ensureWid();var S=wd_summary(ST.items,ST.cfg||{},new Date());
+      await db.collection('widget').doc(w).set({owner:U.uid,j:JSON.stringify(S),t:Date.now()})}catch(e){console.warn('riepilogo widget',e)}}
+  document.addEventListener('visibilitychange',function(){if(document.hidden&&U&&ST.cfg)publish()});
+
+  /* ---------- importazione dal vecchio foglio Google ---------- */
+  function parseCode(code){code=String(code||'').trim();var m=code.match(/^(https:\/\/script\.google\.com\/[^?#\s]+\/exec)(?:\?(\S*))?$/);if(!m)return null;var k=new URLSearchParams(m[2]||'').get('k');return k?{url:m[1],k:k}:null}
+  function oldConn(){try{var c=JSON.parse(ls(CONN)||'null');return c&&c.url&&c.k?c:null}catch(e){return null}}
+  function askConn(){return new Promise(function(res){
+    var d=sheet('<h1>Importa dal vecchio foglio</h1><p>Incolla il codice di collegamento della vecchia app (inizia con https://script.google.com e finisce con …&amp;k=…). Lo trovi in Impostazioni › Widget della vecchia app.</p><textarea id="code" autocapitalize="off" spellcheck="false" placeholder="https://script.google.com/macros/s/…/exec?app=1&amp;k=…"></textarea><button id="ok" type="button">Importa</button><button id="no" type="button" class="sec">Annulla</button><p class="err" id="err" role="alert"></p>');
+    d.querySelector('#no').onclick=function(){closeSheet();res(null)};
+    d.querySelector('#ok').onclick=function(){var c=parseCode(d.querySelector('#code').value);if(!c){d.querySelector('#err').textContent='Il codice non è valido.';return}closeSheet();ls(CONN,JSON.stringify(c));res(c)}})}
+  async function importOld(){
+    var c=oldConn()||await askConn();if(!c)return null;
+    var r=await fetch(c.url+'?api=1&op=getData&k='+encodeURIComponent(c.k)+'&t='+Date.now(),{cache:'no-store'});
+    var j;try{j=JSON.parse(await r.text())}catch(e){throw new Error('il vecchio script non risponde (controlla che sia «Chiunque» e aggiornato)')}
+    if(!j.ok)throw new Error(j.errore||'errore del vecchio script');
+    var d=typeof j.result==='string'?JSON.parse(j.result):j.result;
+    var arr=Object.keys(d.items||{}).map(function(id){return Object.assign({id:id},d.items[id])});
+    var n=await saveItems(arr,true,true);
+    var invIds=Object.keys(d.inv||{}).filter(function(id){return!ST.inv[id]});
+    for(var i=0;i<invIds.length;i+=400){var b=db.batch();invIds.slice(i,i+400).forEach(function(id){var x=d.inv[id];ST.inv[id]=x;b.set(uref().collection('inv').doc(id),x)});await commit(b,true)}
+    if(!ST.cfg&&d.cfg){ST.cfg=d.cfg;var b2=db.batch();b2.set(metaRef('cfg'),{json:JSON.stringify(d.cfg),t:Date.now()});await commit(b2,true)}
+    schedulePublish();return n+invIds.length}
+
+  /* ---------- avvio ---------- */
+  function inject(html){
+    var doc=new DOMParser().parseFromString(html,'text/html');var code='';
+    doc.querySelectorAll('script').forEach(function(s){code+=s.textContent+'\n';s.remove()});
+    var boot=document.getElementById('boot');if(boot)boot.remove();
+    Array.prototype.slice.call(doc.head.childNodes).concat(Array.prototype.slice.call(doc.body.childNodes)).forEach(function(n){
+      if(n.nodeName==='TITLE'||n.nodeName==='META')return;document.body.appendChild(document.importNode(n,true))});
+    var s=document.createElement('script');s.textContent=code;document.body.appendChild(s)}
+  function runner(){var ok=function(){},ko=function(){};var r={withSuccessHandler:function(f){ok=f;return r},withFailureHandler:function(f){ko=f;return r}};
+    Object.keys(OPS).forEach(function(op){r[op]=function(arg){
+      var p=Promise.resolve().then(function(){return OPS[op](arg)});
+      if(op==='getData'){
+        var prima=ls(CK+U.uid);
+        p=p.then(function(v){window.__bilOffline=false;ls(CK+U.uid,v);return v},function(err){if(prima){window.__bilOffline=true;return prima}throw err});
+        /* prima apertura: mostra subito i dati dell'ultima volta, poi aggiorna appena arrivano quelli nuovi */
+        if(prima&&!window.__bilAvviata){window.__bilAvviata=true;ok(prima);
+          p.then(function(v){if(v===prima)return;if(window.__bilFresh)window.__bilFresh(v);else location.reload()},function(){});return}
+        window.__bilAvviata=true}
+      p.then(function(v){ok(v)},function(e){ko(e)})}});return r}
+  async function start(u){
+    U=u;
+    window.google={script:{get run(){return runner()},url:{getLocation:function(cb){var p={};new URLSearchParams(location.search).forEach(function(v,k){p[k]=v});cb({parameter:p})}}}};
+    /* primo accesso con dati vecchi disponibili: propone l'importazione */
+    if(!ls(CK+u.uid)&&oldConn()&&!ls(NOIMP)){
+      try{await load()}catch(e){}
+      if(!Object.keys(ST.items).length&&!ST.cfg){
+        await new Promise(function(done){
+          var d=sheet('<h1>Importare i dati vecchi?</h1><p>Ho trovato il collegamento al tuo vecchio foglio Google. Posso copiare qui movimenti, conti e budget: il foglio resta com\'è.</p><button id="ok" type="button">Importa i miei dati</button><button id="no" type="button" class="sec">No, parto da zero</button><p class="err" id="err" role="alert"></p>');
+          d.querySelector('#no').onclick=function(){ls(NOIMP,'1');closeSheet();done()};
+          d.querySelector('#ok').onclick=async function(){var b=this;b.disabled=true;b.textContent='Importazione…';
+            try{await importOld();closeSheet();done()}catch(e){b.disabled=false;b.textContent='Riprova';d.querySelector('#err').textContent='Importazione non riuscita: '+(e&&e.message||e)}}})}}
+    var cached=null;
+    try{var r=await fetch('app.html',{cache:'no-cache'});if(!r.ok)throw new Error('app');cached=await r.text()}
+    catch(e){var b=document.getElementById('boot');if(b)b.textContent='Non riesco ad aprire il bilancio: controlla la connessione.';return}
+    inject(cached)}
+  (async function(){
+    var u=await firstUser(),err='';
+    if(!u){try{var rr=await auth.getRedirectResult();if(rr&&rr.user)u=rr.user}catch(e){err='Accesso non riuscito'+(e&&e.code?' ('+e.code+')':'')+'.'}}
+    if(!u)u=await login(err);
+    /* la copia offline di Firestore si attiva prima della prima lettura */
+    try{await db.enablePersistence({synchronizeTabs:true})}catch(e){}
+    start(u)})();
+})();
+</script>
+</body>
+</html>
