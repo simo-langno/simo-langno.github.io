@@ -1,0 +1,23 @@
+{
+  "id": "./",
+  "name": "Il mio bilancio",
+  "short_name": "Bilancio",
+  "description": "Spese, entrate, conti, budget e previsioni, collegati al tuo Foglio Google.",
+  "lang": "it",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#EEF3FF",
+  "theme_color": "#1D4ED8",
+  "categories": ["finance", "productivity"],
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Nuova spesa", "short_name": "Spesa", "url": "./?azione=spesa", "icons": [{ "src": "icon-192.png", "sizes": "192x192" }] },
+    { "name": "Nuova entrata", "short_name": "Entrata", "url": "./?azione=entrata", "icons": [{ "src": "icon-192.png", "sizes": "192x192" }] }
+  ]
+}

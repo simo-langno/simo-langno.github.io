@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1D4ED8">
+<meta name="description" content="Spese, entrate, conti, budget e previsioni, collegati al tuo Foglio Google.">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Bilancio">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>Il mio bilancio</title>
+<style>
+html,body{margin:0;background:#EEF3FF}
+@media (prefers-color-scheme: dark){html,body{background:#0B1020}}
+#boot{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;font-family:system-ui,sans-serif;color:#566080;font-size:15px}
+#boot img{width:72px;height:72px;border-radius:18px;display:block;margin:0 auto 14px}
+#setup{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;padding:24px;background:linear-gradient(160deg,#1D4ED8,#22B8F0);font-family:system-ui,sans-serif;color:#141A33}
+#setup .box{width:100%;max-width:460px;background:#FFFFFF;border-radius:24px;padding:26px 22px;box-shadow:0 20px 50px rgba(10,20,80,.3)}
+#setup img{width:64px;height:64px;border-radius:16px;display:block}
+#setup h1{font-size:23px;margin:16px 0 6px}
+#setup p{margin:0 0 14px;font-size:15px;line-height:1.5;color:#566080}
+#setup label{display:block;font-size:13px;font-weight:600;margin-bottom:6px}
+#setup textarea{width:100%;box-sizing:border-box;min-height:92px;border:1px solid #DFE5F5;border-radius:14px;padding:12px;font:14px/1.4 ui-monospace,Menlo,monospace;resize:vertical;background:#F4F7FF;color:#141A33}
+#setup button{margin-top:14px;width:100%;height:52px;border:0;border-radius:16px;background:#1D4ED8;color:#fff;font:700 16px system-ui,sans-serif;cursor:pointer}
+#setup button[disabled]{opacity:.6}
+#setup .err{color:#C81E3A;font-size:14px;min-height:20px;margin:10px 0 0}
+@media (prefers-color-scheme: dark){#setup{background:linear-gradient(160deg,#14256B,#0F3D8C)}#setup .box{background:#161D36;color:#F2F5FF}#setup p{color:#AAB4D6}#setup textarea{background:#111830;border-color:#263056;color:#F2F5FF}#setup .err{color:#FF6B80}}
+</style>
+</head>
+<body>
+<div id="boot"><div><img src="icon-192.png" alt="">Apertura del bilancio…</div></div>
+<script>
+/* Guscio dell'app installabile: scarica l'app dal tuo script Google e la collega al Foglio.
+   I dati e la chiave non sono mai in questo sito: la chiave resta solo sul tuo dispositivo. */
+(function(){
+  var CONN='bil.conn', CACHE='bil.cache', APP='bil.app';
+  var qs=new URLSearchParams(location.search);
+  function ls(k,v){try{if(v===undefined)return localStorage.getItem(k);if(v===null)localStorage.removeItem(k);else localStorage.setItem(k,v)}catch(e){return null}}
+  if(qs.get('reset')){ls(CONN,null);ls(CACHE,null);ls(APP,null);history.replaceState(null,'',location.pathname)}
+  var conn=null;try{conn=JSON.parse(ls(CONN)||'null')}catch(e){}
+  window.__bilPWA=true;
+  if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('./sw.js').catch(function(){})})}
+  function parse(code){
+    code=String(code||'').trim();
+    var m=code.match(/^(https:\/\/script\.google\.com\/[^?#\s]+\/exec)(?:\?(\S*))?$/);if(!m)return null;
+    var k=new URLSearchParams(m[2]||'').get('k');return k?{url:m[1],k:k}:null}
+  var READ={getData:1,getSheetUrl:1,getWidgetKey:1,getAppKey:1,getIndex:1};
+  function call(c,op,arg){
+    var req=READ[op]
+      ?fetch(c.url+'?api=1&op='+op+'&k='+encodeURIComponent(c.k)+'&t='+Date.now(),{cache:'no-store'})
+      :fetch(c.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({k:c.k,op:op,arg:arg})});
+    return req.then(function(r){return r.text()}).then(function(t){
+      var j;try{j=JSON.parse(t)}catch(e){throw new Error('Risposta non valida dallo script: controlla che il deployment sia su «Chiunque».')}
+      if(!j.ok)throw new Error(j.errore||'Errore dello script');return j.result})}
+  function inject(html){
+    var doc=new DOMParser().parseFromString(html,'text/html');var code='';
+    doc.querySelectorAll('script').forEach(function(s){code+=s.textContent+'\n';s.remove()});
+    var boot=document.getElementById('boot');if(boot)boot.remove();
+    Array.prototype.slice.call(doc.head.childNodes).concat(Array.prototype.slice.call(doc.body.childNodes)).forEach(function(n){
+      if(n.nodeName==='TITLE'||n.nodeName==='META')return;document.body.appendChild(document.importNode(n,true))});
+    var s=document.createElement('script');s.textContent=code;document.body.appendChild(s)}
+  if(conn&&conn.url&&conn.k){
+    var OPS=['getData','saveItems','deleteItems','saveCfg','saveInv','deleteInv','getSheetUrl','getWidgetKey','getAppKey'];
+    function runner(){var ok=function(){},ko=function(){};var r={withSuccessHandler:function(f){ok=f;return r},withFailureHandler:function(f){ko=f;return r}};
+      OPS.forEach(function(op){r[op]=function(arg){
+        var p=call(conn,op,arg);
+        if(op==='getData')p=p.then(function(v){window.__bilOffline=false;ls(CACHE,v);return v},function(err){
+          var cached=ls(CACHE);
+          if(cached&&!(err&&/Chiave|Risposta/.test(err.message||''))){window.__bilOffline=true;return cached}throw err});
+        p.then(function(v){ok(v)},function(e){ko(e)})}});return r}
+    window.google={script:{get run(){return runner()},url:{getLocation:function(cb){var p={};new URLSearchParams(location.search).forEach(function(v,k){p[k]=v});cb({parameter:p})}}}};
+    var cachedApp=ls(APP);
+    var fresh=call(conn,'getIndex').then(function(h){ls(APP,h);return h});
+    if(cachedApp){inject(cachedApp);fresh.catch(function(){})}
+    else fresh.then(inject,function(e){var b=document.getElementById('boot');if(b)b.textContent='Non riesco ad aprire il bilancio: '+(e&&e.message||'controlla la connessione')+'. Per ricollegare apri questa pagina con ?reset=1 alla fine dell\'indirizzo.'});
+    return}
+  document.addEventListener('DOMContentLoaded',function(){
+    var boot=document.getElementById('boot');if(boot)boot.remove();
+    var d=document.createElement('div');d.id='setup';
+    d.innerHTML='<div class="box"><img src="icon-192.png" alt=""><h1>Collega il tuo bilancio</h1>'+
+      '<p>L\'app legge e salva i dati nel tuo Foglio Google. Incolla qui il codice di collegamento: serve una volta sola.</p>'+
+      '<label for="code">Codice di collegamento</label><textarea id="code" placeholder="https://script.google.com/macros/s/…/exec?app=1&amp;k=…" autocapitalize="off" spellcheck="false"></textarea>'+
+      '<button id="go" type="button">Collega</button><p class="err" id="err" role="alert"></p></div>';
+    document.body.appendChild(d);
+    document.getElementById('go').addEventListener('click',function(){
+      var b=this,err=document.getElementById('err'),c=parse(document.getElementById('code').value);
+      if(!c){err.textContent='Il codice deve iniziare con https://script.google.com e contenere la chiave (…/exec?app=1&k=…).';return}
+      b.disabled=true;b.textContent='Controllo…';err.textContent='';
+      call(c,'getIndex').then(function(h){ls(CONN,JSON.stringify(c));ls(APP,h);location.reload()},
+        function(e){b.disabled=false;b.textContent='Collega';err.textContent=(e&&e.message&&!/Failed to fetch|NetworkError|Load failed/.test(e.message))?e.message:'Non riesco a raggiungere lo script. Controlla la connessione e che il deployment sia su «Chiunque» con l\'ultima versione del codice.'})});
+  });
+})();
+</script>
+</body>
+</html>
