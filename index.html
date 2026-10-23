@@ -67,9 +67,14 @@ html,body{margin:0;background:#EEF3FF}
     function runner(){var ok=function(){},ko=function(){};var r={withSuccessHandler:function(f){ok=f;return r},withFailureHandler:function(f){ko=f;return r}};
       OPS.forEach(function(op){r[op]=function(arg){
         var p=call(conn,op,arg);
-        if(op==='getData')p=p.then(function(v){window.__bilOffline=false;ls(CACHE,v);return v},function(err){
-          var cached=ls(CACHE);
-          if(cached&&!(err&&/Chiave|Risposta/.test(err.message||''))){window.__bilOffline=true;return cached}throw err});
+        if(op==='getData'){
+          var prima=ls(CACHE);
+          p=p.then(function(v){window.__bilOffline=false;ls(CACHE,v);return v},function(err){
+            if(prima&&!(err&&/Chiave|Risposta/.test(err.message||''))){window.__bilOffline=true;return prima}throw err});
+          /* prima apertura: mostra subito i dati dell'ultima volta, poi aggiorna appena arrivano quelli nuovi */
+          if(prima&&!window.__bilAvviata){window.__bilAvviata=true;ok(prima);
+            p.then(function(v){if(v===prima)return;if(window.__bilFresh)window.__bilFresh(v);else location.reload()},function(){});return}
+          window.__bilAvviata=true}
         p.then(function(v){ok(v)},function(e){ko(e)})}});return r}
     window.google={script:{get run(){return runner()},url:{getLocation:function(cb){var p={};new URLSearchParams(location.search).forEach(function(v,k){p[k]=v});cb({parameter:p})}}}};
     var cachedApp=ls(APP);
