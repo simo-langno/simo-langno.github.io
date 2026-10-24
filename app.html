@@ -751,9 +751,9 @@ async function afterLoad(){
 
 /* ================= chrome ================= */
 const TABS=[["home","Home","House"],["movimenti","Movimenti","ReceiptText"],["*add","Aggiungi","Plus"],["budget","Budget","Target"],["altro","Altro","Ellipsis"]];
-const TITLES={previsioni:"In arrivo",movimenti:"Movimenti",conti:"Conti",grafici:"Grafici",categorie:"Categorie",budget:"Budget",ricorrenti:"Pagamenti regolari",promemoria:"Promemoria",investimenti:"Investimenti",notizie:"Notizie finanziarie",impostazioni:"Impostazioni",altro:"Altro"};
+const TITLES={previsioni:"In arrivo",movimenti:"Movimenti",conti:"Conti",grafici:"Grafici",categorie:"Categorie",budget:"Budget",ricorrenti:"Pagamenti regolari",promemoria:"Promemoria",investimenti:"Investimenti",impostazioni:"Impostazioni",altro:"Altro"};
 const MAINV=["home","movimenti","budget","altro"];
-const tabOf=v=>v==="notizie"||v==="investimenti"?"home":v==="catdet"?tabOf(S.back||"home"):MAINV.includes(v)?v:"altro";
+const tabOf=v=>v==="investimenti"?"home":v==="catdet"?tabOf(S.back||"home"):MAINV.includes(v)?v:"altro";
 function syncText(){if(S.mode==="local")return"Non salvato: copia di prova";if(!S.lastSync)return"Caricamento…";const d=S.lastSync;
   return (S.mode==="gas"?"Sincronizzato · ":"Salvato · ")+String(d.getDate()).padStart(2,"0")+"/"+String(d.getMonth()+1).padStart(2,"0")+"/"+d.getFullYear()+" "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0")}
 function renderDrawer(){
@@ -784,10 +784,9 @@ function renderHeader(){
   if(!S.ro&&v==="previsioni")right='<button class="hbtn" data-act="newfut" aria-label="Nuovo movimento previsto">'+ico("Plus",18)+"<span>Previsto</span></button>";
   if(!S.ro&&v==="categorie")right='<button class="hbtn" data-catedit="'+S.catTab+'|" aria-label="Nuova categoria">'+ico("Plus",18)+"<span>Categoria</span></button>";
   if(!S.ro&&v==="ricorrenti")right='<button class="hbtn" data-act="newric" aria-label="Nuovo pagamento regolare">'+ico("Plus",18)+"<span>Nuovo</span></button>";
-  if(v==="investimenti")right='<button class="hbtn" data-act="news" aria-label="Notizie finanziarie">'+ico("Newspaper",18)+"<span>Notizie</span></button>";
   if(v==="movimenti"||v==="grafici")right='<button class="hbtn" data-act="export" aria-label="Scarica PDF o Excel">'+ico("Download",18)+"<span>Scarica</span></button>";
   if(!S.ro&&v==="promemoria")right='<button class="hbtn" data-act="newprom" aria-label="Nuovo promemoria">'+ico("Plus",18)+"<span>Nuovo</span></button>";
-  const back=isMain?"":'<button class="hb back" data-nav="'+(v==="catdet"?(S.back||"home"):v==="notizie"?"investimenti":v==="investimenti"?"home":"altro")+'" aria-label="Indietro">'+ico("ChevronLeft",22)+"</button>";
+  const back=isMain?"":'<button class="hb back" data-nav="'+(v==="catdet"?(S.back||"home"):v==="investimenti"?"home":"altro")+'" aria-label="Indietro">'+ico("ChevronLeft",22)+"</button>";
   h.innerHTML='<div class="hdr-in"><div class="hdr-row page'+(isMain?" top":"")+'">'+(back||"<span></span>")+'<h1 class="htitle">'+esc(v==="catdet"&&S.cd?S.cd.n:TITLES[v]||"")+'</h1><div class="hdr-actions">'+right+(v==="movimenti"||v==="altro"||v==="budget"?themeBtn():"")+"</div></div>"+
     (v==="categorie"?'<div class="ttabs" role="tablist"><button role="tab" data-cattab="S" aria-selected="'+(S.catTab==="S")+'">SPESE</button><button role="tab" data-cattab="E" aria-selected="'+(S.catTab==="E")+'">ENTRATE</button></div>':"")+
     '<div style="height:6px"></div></div>';
@@ -800,7 +799,7 @@ function render(){
   document.getElementById("fabHost").innerHTML="";
   if(!S.ready){v.innerHTML='<div class="loading">Caricamento dei movimenti…</div>';return}
   const banner=S.mode==="local"?'<div class="banner">Questa copia non è collegata a un archivio: puoi provarla, ma i dati non vengono salvati.</div>':S.ro?'<div class="banner">Puoi consultare i dati ma non modificarli.</div>':"";
-  const fn={home:vHome,altro:vAltro,previsioni:vPrev,movimenti:vMov,catdet:vCatDet,conti:vConti,grafici:vGrafici,categorie:vCat,budget:vBudget,ricorrenti:vRic,promemoria:vProm,investimenti:vInv,notizie:vNews,impostazioni:vSet}[S.view]||vHome;
+  const fn={home:vHome,altro:vAltro,previsioni:vPrev,movimenti:vMov,catdet:vCatDet,conti:vConti,grafici:vGrafici,categorie:vCat,budget:vBudget,ricorrenti:vRic,promemoria:vProm,investimenti:vInv,impostazioni:vSet}[S.view]||vHome;
   const keep=document.activeElement&&document.activeElement.id==="fq";
   v.innerHTML=banner+fn();
   if(keep){const el=document.getElementById("fq");if(el){el.focus();const n=el.value.length;el.setSelectionRange(n,n)}}
@@ -1447,28 +1446,6 @@ async function submitExp(){readExp();const s=S.sheet;
   catch(e){s.busy=false;s.err="Non riesco a preparare il file. Controlla la connessione e riprova.";if(S.sheet===s)drawSheet()}}
 
 
-/* ================= notizie finanziarie ================= */
-const NEWS_C={IT:["Italia","IT","it-IT","https://it.finance.yahoo.com","FTSEMIB.MI"],US:["Stati Uniti","US","en-US","https://finance.yahoo.com","^GSPC"],GB:["Regno Unito","GB","en-GB","https://uk.finance.yahoo.com","^FTSE"],DE:["Germania","DE","de-DE","https://de.finance.yahoo.com","^GDAXI"],FR:["Francia","FR","fr-FR","https://fr.finance.yahoo.com","^FCHI"],ES:["Spagna","ES","es-ES","https://es.finance.yahoo.com","^IBEX"]};
-function newsCountry(){const c=lsGet("nc","");if(NEWS_C[c])return c;try{const r=((navigator.language||"it-IT").split("-")[1]||"").toUpperCase();if(NEWS_C[r])return r;const l=(navigator.language||"it").slice(0,2).toLowerCase();return {it:"IT",de:"DE",fr:"FR",es:"ES"}[l]||(l==="en"?"US":"IT")}catch(e){return"IT"}}
-const NEWS_S=[["yahoo","Yahoo Finance"],["ansa","ANSA Economia"],["mw","MarketWatch"],["bbc","BBC Business"],["cnbc","CNBC"],["gua","The Guardian Business"]];
-function newsFeed(id,c){const k=NEWS_C[c];return {yahoo:"https://feeds.finance.yahoo.com/rss/2.0/headline?s="+encodeURIComponent(k[4])+"&region="+k[1]+"&lang="+k[2],ansa:"https://www.ansa.it/sito/notizie/economia/economia_rss.xml",mw:"https://feeds.content.dowjones.io/public/rss/mw_topstories",bbc:"https://feeds.bbci.co.uk/news/business/rss.xml",cnbc:"https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=10001147",gua:"https://www.theguardian.com/uk/business/rss"}[id]}
-function newsSel(){const v=lsGet("ns",null);const ids=NEWS_S.map(x=>x[0]);if(Array.isArray(v)){const r=v.filter(x=>ids.includes(x));if(r.length)return r}const c=newsCountry();return c==="IT"?["yahoo","ansa"]:c==="US"?["yahoo","cnbc","mw"]:c==="GB"?["yahoo","bbc","gua"]:["yahoo","bbc"]}
-const NEWS={key:"",items:null,busy:false,err:"",t:0};
-function loadNews(force){const c=newsCountry(),sel=newsSel(),key=c+"|"+sel.join(",");if(NEWS.busy)return;if(!force&&NEWS.key===key&&NEWS.items&&Date.now()-NEWS.t<600000)return;
-  NEWS.key=key;NEWS.busy=true;NEWS.err="";NEWS.items=null;if(S.view==="notizie")render();
-  Promise.all(sel.map(id=>fetch("https://api.rss2json.com/v1/api.json?rss_url="+encodeURIComponent(newsFeed(id,c))).then(r=>{if(!r.ok)throw 0;return r.json()}).then(j=>(j&&j.items||[]).filter(x=>x&&x.title&&/^https?:\/\//i.test(x.link||"")).slice(0,15).map(x=>({t:String(x.title),l:x.link,d:x.pubDate||"",s:(NEWS_S.find(a=>a[0]===id)||[])[1]||""}))).catch(()=>[]))).then(arr=>{
-    const it=[].concat(...arr).sort((a,b)=>(Date.parse(String(b.d).replace(" ","T")+"Z")||0)-(Date.parse(String(a.d).replace(" ","T")+"Z")||0)).slice(0,40);
-    NEWS.busy=false;if(!it.length){NEWS.err="Non riesco a caricare le notizie adesso. Controlla la connessione, oppure aprile direttamente sui siti delle fonti.";NEWS.items=null}else{NEWS.items=it;NEWS.t=Date.now()}
-    if(S.view==="notizie")render()})}
-function newsAgo(d){const t=Date.parse(String(d).replace(" ","T")+"Z");if(!isFinite(t))return"";const m=Math.max(0,Math.round((Date.now()-t)/60000));return m<60?m+" min fa":m<1440?Math.round(m/60)+" h fa":Math.round(m/1440)+" g fa"}
-function vNews(){const c=newsCountry();const k=NEWS_C[c];const sel=newsSel();
-  return '<div class="narrow"><section class="card"><div class="card-h" style="margin-bottom:8px"><h2>Fonti</h2></div><div class="catchips">'+NEWS_S.map(([id,n])=>'<button class="chipbtn" data-nsrc="'+id+'" aria-pressed="'+sel.includes(id)+'" style="'+(sel.includes(id)?"background:var(--accent);color:#fff;border-color:var(--accent)":"")+'">'+esc(n)+"</button>").join("")+'</div>'+
-   '<div class="toolbar" style="justify-content:space-between;margin-top:12px"><label class="muted" for="nc" style="font-size:14px">Paese (per Yahoo Finance)</label><select class="input" id="nc" aria-label="Paese delle notizie" style="max-width:200px">'+Object.entries(NEWS_C).map(([a,b])=>'<option value="'+a+'"'+(a===c?" selected":"")+">"+b[0]+"</option>").join("")+'</select></div>'+
-   '<div class="toolbar" style="margin-top:8px"><a class="btn" href="'+k[3]+'" target="_blank" rel="noopener noreferrer">'+ico("ExternalLink",16)+'Apri Yahoo Finance</a><button class="btn" data-act="newsrefresh">'+ico("RefreshCw",16)+"Aggiorna</button></div></section>"+
-   '<section class="card"><div class="card-h"><h2>Ultime notizie</h2></div>'+
-   (NEWS.busy?'<p class="muted" style="margin:0">Carico le notizie…</p>':NEWS.err?'<p class="err" style="margin:0">'+esc(NEWS.err)+"</p>":NEWS.items?'<div class="nws">'+NEWS.items.map(x=>'<a class="nw" href="'+esc(x.l)+'" target="_blank" rel="noopener noreferrer"><b>'+esc(x.t)+"</b><small>"+esc(x.s)+(newsAgo(x.d)?" · "+esc(newsAgo(x.d)):"")+"</small></a>").join("")+"</div>":'<p class="muted" style="margin:0">Nessuna notizia.</p>')+
-   '</section><p class="faint" style="font-size:12.5px;margin:0 4px">Le notizie sono dei rispettivi editori e si aprono sui loro siti. Non sono consigli di investimento.</p></div>'}
-
 /* ================= tasto indietro / gesto ================= */
 let _hpop=false,_lastg=0;
 try{history.replaceState({g:1},"");history.pushState({v:"home"},"")}catch(e){}
@@ -1479,11 +1456,10 @@ window.addEventListener("popstate",e=>{const st=e.state;
   if(st&&st.v&&st.v!==S.view){if(st.cd)S.cd=st.cd;if(st.back)S.back=st.back;_hpop=true;nav(st.v);_hpop=false}});
 
 /* ================= events ================= */
-function nav(v){const pv=S.view;S.view=v;if(v!==pv)hpush();if(v==="notizie")loadNews();S.editBudget=null;document.body.classList.remove("drawer-open");if(v!=="movimenti")S.shown=150;render();window.scrollTo(0,0)}
+function nav(v){const pv=S.view;S.view=v;if(v!==pv)hpush();S.editBudget=null;document.body.classList.remove("drawer-open");if(v!=="movimenti")S.shown=150;render();window.scrollTo(0,0)}
 function g2(id){const e=document.getElementById(id);return e?e.value:""}
 function cfgUpdate(fn,msg){const c=clone();fn(c);return write(B.saveCfg(c),msg).then(()=>render())}
 document.addEventListener("click",async e=>{const t=e.target;const q=s=>t.closest(s);let el;
-  if((el=q("[data-nsrc]"))){const id=el.dataset.nsrc;let l=newsSel();l=l.includes(id)?l.filter(z=>z!==id):l.concat(id);if(!l.length){toast("Tieni almeno una fonte");return}lsSet("ns",l);loadNews(true);return}
   if(S.sheet){const s=S.sheet;
     if(t.classList&&t.classList.contains("overlay")){closeSheet();return}
     if(q('[data-act="close"]')){closeSheet();return}
@@ -1571,8 +1547,6 @@ document.addEventListener("click",async e=>{const t=e.target;const q=s=>t.closes
     const y=P.rows.find(r=>r.on);S.pdf=null;S.invB=P.broker;if(y)S.invYear=+y.d.slice(0,4);write(Promise.all(ps),n+(n===1?" operazione salvata":" operazioni salvate")+(sk?" ("+sk+" già presenti)":"")).then(render)}
   else if(act==="addbrk"){const v=g2("newBrk").trim();if(!v)return;cfgUpdate(c=>{c.broker=c.broker||[];if(!c.broker.includes(v))c.broker.push(v)},"Conto aggiunto")}
   else if(act==="uptoggle"){S.upOpen=!S.upOpen;lsSet("upopen",S.upOpen);render()}
-  else if(act==="news"){nav("notizie")}
-  else if(act==="newsrefresh"){loadNews(true)}
   else if(act==="togglehide"){S.hideBal=!S.hideBal;lsSet("hide",S.hideBal);render()}
   else if(act==="drawerclose")document.body.classList.remove("drawer-open");
   else if(act==="accsel")openAccSel();
@@ -1622,7 +1596,6 @@ document.addEventListener("keydown",async e=>{const t=e.target;
     else if((e.key==="ArrowLeft"||e.key==="ArrowRight")&&S.p.mode!=="all"&&["home","movimenti","grafici","catdet"].includes(S.view))shift(e.key==="ArrowLeft"?-1:1)}});
 document.addEventListener("focusout",e=>{const t=e.target;if(t.id==="budIn"&&S.editBudget)commitBudget(t)});
 document.addEventListener("change",e=>{const t=e.target;
-  if(t.id==="nc"){lsSet("nc",t.value);loadNews(true);return}
   if(t.id==="ft"){S.f.t=t.value;if(t.value&&S.f.c&&!S.f.c.startsWith(t.value+"|"))S.f.c="";S.shown=150;render()}
   else if(t.id==="fc"){S.f.c=t.value;S.shown=150;render()}
   else if(t.id==="fa"){S.f.a=t.value;S.shown=150;render()}
