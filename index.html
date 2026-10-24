@@ -172,8 +172,10 @@ function wd_summary(items,cfg,now){
     d.querySelector('#go').addEventListener('click',function(){
       var b=this,err=d.querySelector('#err');b.disabled=true;err.textContent='';
       var prov=new firebase.auth.GoogleAuthProvider();prov.setCustomParameters({prompt:'select_account'});
-      auth.signInWithPopup(prov).then(function(r){res(r.user)},function(e){
-        var c=e&&e.code||'';
+      var done=false,un=function(){};function ok(u){if(done)return;done=true;try{un()}catch(_){}d.innerHTML='<div class="box"><img src="icon-192.png" alt=""><h1>Il mio bilancio</h1><p>Accesso riuscito, apro il bilancio…</p></div>';res(u)}
+      un=auth.onAuthStateChanged(function(u){if(u)ok(u)});
+      auth.signInWithPopup(prov).then(function(r){ok(r.user)},function(e){
+        var c=e&&e.code||'';if(auth.currentUser){ok(auth.currentUser);return}
         if(c==='auth/popup-blocked'||c==='auth/operation-not-supported-in-this-environment'){auth.signInWithRedirect(prov);return}
         b.disabled=false;
         err.textContent=c==='auth/popup-closed-by-user'||c==='auth/cancelled-popup-request'?'Accesso annullato.':c==='auth/unauthorized-domain'?'Questo indirizzo non è autorizzato per l\'accesso Google.':c==='auth/network-request-failed'?'Nessuna connessione: riprova.':'Accesso non riuscito'+(c?' ('+c+')':'')+'.'})})})}
@@ -261,7 +263,7 @@ function wd_summary(items,cfg,now){
   function inject(html){
     var doc=new DOMParser().parseFromString(html,'text/html');var code='';
     doc.querySelectorAll('script').forEach(function(s){code+=s.textContent+'\n';s.remove()});
-    var boot=document.getElementById('boot');if(boot)boot.remove();
+    var boot=document.getElementById('boot');if(boot)boot.remove();var su=document.getElementById('setup');if(su)su.remove();
     Array.prototype.slice.call(doc.head.childNodes).concat(Array.prototype.slice.call(doc.body.childNodes)).forEach(function(n){
       if(n.nodeName==='TITLE'||n.nodeName==='META')return;document.body.appendChild(document.importNode(n,true))});
     var s=document.createElement('script');s.textContent=code;document.body.appendChild(s)}
@@ -297,7 +299,7 @@ function wd_summary(items,cfg,now){
     if(!u){try{var rr=await auth.getRedirectResult();if(rr&&rr.user)u=rr.user}catch(e){err='Accesso non riuscito'+(e&&e.code?' ('+e.code+')':'')+'.'}}
     if(!u)u=await login(err);
     /* la copia offline di Firestore si attiva prima della prima lettura */
-    try{await db.enablePersistence({synchronizeTabs:true})}catch(e){}
+    try{await Promise.race([db.enablePersistence({synchronizeTabs:true}).catch(function(){}),later(2500)])}catch(e){}
     start(u)})();
 })();
 </script>
