@@ -1237,11 +1237,30 @@ async function pdfLines(file){await loadScript("pdfjs");const L=window.pdfjsLib;
   for(let p=1;p<=pdf.numPages;p++){const tc=await (await pdf.getPage(p)).getTextContent();const rows=new Map();
     for(const it of tc.items){if(!it.str||!it.str.trim())continue;const y=Math.round(it.transform[5]/3);let r=rows.get(y);if(!r){r=[];rows.set(y,r)}r.push({x:it.transform[4],w:it.width,s:it.str})}
     [...rows.entries()].sort((a,b)=>b[0]-a[0]).forEach(([,r])=>{r.sort((a,b)=>a.x-b.x);let line="",end=null;for(const c of r){if(end!==null&&c.x-end>1.5)line+="  ";line+=c.s;end=c.x+c.w}out.push(line.replace(/\s+$/,""))})}
+  if(out.some(l=>l.indexOf("\u0000")>=0)){try{const alt=await pdfLinesOps(pdf,L);if(alt.length)return alt}catch(e){}}
+  return out}
+/* Alcuni PDF (es. Trading 212) hanno font "Type 3" senza mappa dei numeri: leggo i singoli glifi e ricostruisco le cifre dai codici */
+const DIGCODE={3:"-",4:"0",6:"1",7:"2",8:"3",9:"4",11:"5",12:"6",13:"7",15:"8",16:"9",31:"a"};
+async function pdfLinesOps(pdf,L){const O=L.OPS,out=[];
+  for(let p=1;p<=pdf.numPages;p++){const ol=await (await pdf.getPage(p)).getOperatorList();const cells=[];let cur=null,x=0,y=0;
+    const start=()=>{cur={x,y,t:""};cells.push(cur)};
+    for(let i=0;i<ol.fnArray.length;i++){const f=ol.fnArray[i],a=ol.argsArray[i];
+      if(f===O.beginText){x=0;y=0;start()}
+      else if(f===O.setTextMatrix){x=a[4];y=a[5];if(!cur||cur.t){start()}else{cur.x=x;cur.y=y}}
+      else if(f===O.moveText){x+=a[0];y+=a[1]}
+      else if(f===O.showText&&a[0]){if(!cur)start();for(const g of a[0]){if(!g||typeof g!=="object")continue;let u=g.unicode;if(!u||u==="\u0000"){u=DIGCODE[g.originalCharCode]||"-"}cur.t+=u}}}
+    const rows=new Map();for(const c of cells){if(!c.t.trim())continue;const k=Math.round(c.y/6);(rows.get(k)||rows.set(k,[]).get(k)).push(c)}
+    [...rows.entries()].sort((a,b)=>a[0]-b[0]).forEach(([,r])=>{r.sort((a,b)=>a.x-b.x);out.push(r.map(c=>c.t.trim()).join("  "))})}
   return out}
 function parseNum(t){let x=String(t).trim();let neg=false;if(/^\(.*\)$/.test(x)){neg=true;x=x.slice(1,-1)}if(/[-−–]$/.test(x)){neg=true;x=x.slice(0,-1)}if(/^[-−–]/.test(x)){neg=true;x=x.slice(1)}x=x.replace(/^[+]/,"").replace(/[^\d.,]/g,"");if(!x)return NaN;
   const lc=x.lastIndexOf(","),ld=x.lastIndexOf(".");if(lc>=0&&ld>=0){if(lc>ld)x=x.replace(/\./g,"").replace(",",".");else x=x.replace(/,/g,"")}else if(lc>=0){x=/^\d{1,3}(,\d{3})+$/.test(x)?x.replace(/,/g,""):x.replace(",",".")}else if(ld>=0&&/^\d{1,3}(\.\d{3})+$/.test(x)){x=x.replace(/\./g,"")}
   const v=parseFloat(x);return neg?-v:v}
-function parseStatement(lines){const KW=/(plusval|minusval|realiz|p\/l|p&l|result|risultat|utile|perdit|gain|loss|profit|profitto)/i,SELL=/(vendit|\bsell\b|venduto)/i;
+function parseT212(lines){const RX=/^(\d{4}-\d{2}-\d{2})\s+\d{2}:\d{2}:\d{2}\s+(\S+)\s+([A-Z]{2}[A-Z0-9]{9}\d)\s+\d+\s+(Compra|Vendi)\s+(.*)$/;const rows=[];let sells=0,found=0;
+  for(const ln of lines){const m=ln.match(RX);if(!m)continue;found++;if(m[4]!=="Vendi")continue;sells++;
+    const toks=m[5].split(/\s{2,}/).map(x=>x.trim()).filter(Boolean);if(toks.length<2)continue;const p=toks[toks.length-2];
+    const v=p==="-"?0:parseNum(p.replace(/€/g,""));if(!isFinite(v)||!Math.round(v*100))continue;rows.push({d:m[1],titolo:m[2],v:Math.round(v*100)/100,on:true,n:"Trading 212"})}
+  return found?{rows,sells}:null}
+function parseStatement(lines){const t2=parseT212(lines);if(t2)return t2;const KW=/(plusval|minusval|realiz|p\/l|p&l|result|risultat|utile|perdit|gain|loss|profit|profitto)/i,SELL=/(vendit|\bsell\b|venduto)/i;
   const DT=/\b(\d{1,2})[\/.](\d{1,2})[\/.](\d{4}|\d{2})\b|\b(\d{4})-(\d{2})-(\d{2})\b/;const NUM=/[-−–+(]?\d{1,3}(?:[.,]\d{3})*[.,]\d{1,2}[-−–)]?|[-−–+(]?\d+[.,]\d{1,2}[-−–)]?/g;
   const rows=[];let sells=0;
   for(const ln of lines){const m=ln.match(DT);if(!m)continue;const isKw=KW.test(ln),isSell=SELL.test(ln);if(!isKw&&!isSell)continue;
