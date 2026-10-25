@@ -843,7 +843,7 @@ function bigDonut(arr,tot,t,fut){
   return '<div class="dwrap"><svg viewBox="0 0 300 300" role="img" aria-label="'+(t==="S"?"Spese":"Entrate")+" per categoria: totale "+esc(short(tot))+'"><defs>'+defs+"</defs>"+segs+inner+'</svg><div class="dctr"><b class="amt" style="font-size:28px;font-size:'+(ct.length<=6?12:ct.length<=8?10.5:ct.length<=10?9:8)+'cqi">'+esc(ct)+"</b><span>"+(t==="S"?"spese":"entrate")+(S.acc?" · "+esc(S.acc):"")+"</span>"+(fut?"<span>di cui previste "+esc(short(fut))+"</span>":"")+"</div></div>";
 }
 function txMini(x){const sub=x.n&&!S.acc?esc(x.a):"";const t1=x.n||cap(fmtDate(x.d,{weekday:"long"}))+(S.acc?"":" · "+x.a);
-  return '<button class="tx'+(isFut(x)?" fut":"")+'" data-edit="'+esc(x.id)+'"><span class="d">'+sd(x.d)+(x.d.slice(0,4)!==TODAY.slice(0,4)?"<br>"+x.d.slice(0,4):"")+'</span><span class="m"><span class="t1">'+esc(t1)+(isFut(x)?'<span class="pill fut">Previsto</span>':"")+(x.g?'<span class="tagchip">'+esc(x.g)+"</span>":"")+"</span>"+(sub?'<span class="t2">'+sub+"</span>":"")+'</span><span class="amt '+(x.t==="E"?"c-in":"")+'">'+signed(x.v,x.t)+"</span></button>"}
+  return '<button class="tx'+(isFut(x)?" fut":"")+'" data-edit="'+esc(x.id)+'"><span class="d">'+sd(x.d)+(x.d.slice(0,4)!==TODAY.slice(0,4)?"<br>"+x.d.slice(0,4):"")+'</span><span class="m"><span class="t1">'+esc(t1)+(isFut(x)?'<span class="pill fut">Previsto</span>':"")+"</span>"+(sub?'<span class="t2">'+sub+"</span>":"")+'</span><span class="amt '+(x.t==="E"?"c-in":"")+'">'+signed(x.v,x.t)+"</span></button>"}
 function catCard(e,tot,list,t){const key=t+"|"+e.n;
   return '<div class="ccard"><button class="ccard-h" data-catpage="'+esc(key)+'" aria-label="Apri '+esc(e.n)+'">'+badge(e,"lg")+'<span class="cn">'+esc(e.n)+'</span><span class="cp">'+pctI(e.v/tot)+'</span><span class="cv amt">'+short(e.v)+'</span><span class="chev">'+ico("ChevronRight",18)+"</span></button></div>"}
 function openCatPage(t,n){S.cd={t,n,g:(S.cd&&S.cd.g)||"m",all:false};if(S.view!=="catdet")S.back=S.view;nav("catdet")}
@@ -898,28 +898,29 @@ function vPrev(){const hz=S.hz;const t0=pd(TODAY);const until=iso(new Date(t0.ge
    '<p class="faint" style="font-size:12.5px;margin:0 4px">Un movimento con data futura resta "previsto" e non cambia il saldo di oggi. Dal giorno della sua data entra nel saldo da solo: se l\'importo cambia, modificalo.</p></div>'}
 
 
-function filtered(){const f=S.f;const q=f.q.trim().toLowerCase();
-  return inRange().filter(x=>(!f.s||(f.s==="prev"?x.d>TODAY:x.d<=TODAY))&&(!f.t||x.t===f.t)&&(!f.c||(x.t+"|"+x.c)===f.c)&&(!f.a||x.a===f.a||x.to===f.a)&&(!f.g||x.g===f.g)&&(!q||(x.c+" "+x.n+" "+x.a+" "+x.to+" "+x.g+" "+String(x.v).replace(".",",")).toLowerCase().includes(q)))}
+function filtered(){const f=S.f;const q=f.q.trim().toLowerCase();const dp=f.dd||f.mm||f.yy;
+  return (dp?S.list:inRange()).filter(x=>(!f.yy||x.d.slice(0,4)===f.yy)&&(!f.mm||x.d.slice(5,7)===f.mm)&&(!f.dd||x.d.slice(8,10)===f.dd)&&(!f.s||(f.s==="prev"?x.d>TODAY:x.d<=TODAY))&&(!f.t||x.t===f.t)&&(!f.c||(x.t+"|"+x.c)===f.c)&&(!f.a||x.a===f.a||x.to===f.a)&&(!q||(x.c+" "+x.n+" "+x.a+" "+x.to+" "+x.g+" "+String(x.v).replace(".",",")).toLowerCase().includes(q)))}
 function txRow(x){const ci=x.t==="T"?null:catInfo(x.t,x.c);
   const title=x.t==="T"?esc(x.a)+" → "+esc(x.to):esc(ci.n);const sub=[x.t==="T"?"Trasferimento":esc(x.a),x.n?esc(x.n):""].filter(Boolean).join(" · ");
-  return '<button class="row'+(isFut(x)?" fut":"")+'" data-edit="'+esc(x.id)+'">'+txBadge(x)+'<span class="main"><span class="t1">'+title+(isFut(x)?'<span class="pill fut">Previsto</span>':"")+(x.g?'<span class="tagchip">'+esc(x.g)+"</span>":"")+'</span><span class="t2">'+sub+'</span></span><span class="end"><span class="amt '+(x.t==="E"?"c-in":x.t==="T"?"c-tr":"")+'">'+signed(x.v,x.t)+"</span></span></button>"}
+  return '<button class="row'+(isFut(x)?" fut":"")+'" data-edit="'+esc(x.id)+'">'+txBadge(x)+'<span class="main"><span class="t1">'+title+(isFut(x)?'<span class="pill fut">Previsto</span>':"")+'</span><span class="t2">'+sub+'</span></span><span class="end"><span class="amt '+(x.t==="E"?"c-in":x.t==="T"?"c-tr":"")+'">'+signed(x.v,x.t)+"</span></span></button>"}
 function vMov(){const list=filtered();const f=S.f;const c=cfg();const base=inRange();
   const opts=t=>{const used=[...new Set(base.filter(x=>x.t===t).map(x=>x.c))].sort((a,b)=>a.localeCompare(b,"it"));return used.map(n=>'<option value="'+t+"|"+esc(n)+'"'+(f.c===t+"|"+n?" selected":"")+">"+esc(n)+"</option>").join("")};
-  const any=f.t||f.c||f.a||f.g||f.q||f.s;let html="",last="",shown=0;
+  const any=f.t||f.c||f.a||f.q||f.s||f.dd||f.mm||f.yy;const yrs=[...new Set(S.list.map(x=>x.d.slice(0,4)))].sort().reverse();let html="",last="",shown=0;
   const dayTot=new Map();for(const x of list){if(x.t==="T")continue;dayTot.set(x.d,(dayTot.get(x.d)||0)+(x.t==="E"?x.v:-x.v))}
   for(const x of list){if(shown>=S.shown)break;if(x.d!==last){last=x.d;const dt=dayTot.get(x.d)||0;
     html+='<div class="dayh"><span>'+cap(fmtDate(x.d,{weekday:"long",day:"numeric",month:"long",year:x.d.slice(0,4)===TODAY.slice(0,4)?undefined:"numeric"}))+'</span><span class="amt '+(dt>0?"c-in":"")+'">'+(dt?(dt>0?"+":"−")+eur.format(Math.abs(dt)):"")+"</span></div>"}html+=txRow(x);shown++}
-  const chips=[["S","Spese"],["E","Entrate"]].map(([t,l])=>{const a=catAgg(scopedSE(base),t).arr;return a.length?'<div class="catchips"><span class="muted">'+l+'</span>'+a.map(e=>'<button class="chipbtn" data-catpage="'+t+"|"+esc(e.n)+'">'+badge(e,"sm")+esc(e.n)+"</button>").join("")+"</div>":""}).join("");
-  return '<div class="narrow"><section class="card">'+periodBar()+"</section>"+(chips?'<section class="card"><div class="card-h"><h2>Per categoria</h2></div>'+chips+"</section>":"")+
+  return '<div class="narrow"><section class="card">'+periodBar()+"</section>"+
    '<section class="card"><div class="toolbar"><div class="search">'+ico("Search",16)+'<input class="input" id="fq" placeholder="Cerca nota, categoria, importo…" value="'+esc(f.q)+'" aria-label="Cerca"></div>'+
    '<select class="input" id="ft" aria-label="Tipo"><option value="">Tutti i tipi</option><option value="S"'+(f.t==="S"?" selected":"")+'>Spese</option><option value="E"'+(f.t==="E"?" selected":"")+'>Entrate</option><option value="T"'+(f.t==="T"?" selected":"")+'>Trasferimenti</option></select>'+
    '<select class="input" id="fc" aria-label="Categoria"><option value="">Tutte le categorie</option><optgroup label="Spese">'+opts("S")+'</optgroup><optgroup label="Entrate">'+opts("E")+"</optgroup></select>"+
    '<select class="input" id="fa" aria-label="Conto"><option value="">Tutti i conti</option>'+c.accs.map(a=>'<option'+(f.a===a.n?" selected":"")+">"+esc(a.n)+"</option>").join("")+"</select>"+
-   (tags().length?'<select class="input" id="fg" aria-label="Tag"><option value="">Tutti i tag</option>'+tags().map(g=>'<option'+(f.g===g?" selected":"")+">"+esc(g)+"</option>").join("")+"</select>":"")+
+   '<select class="input" id="fd" aria-label="Giorno"><option value="">Tutti i giorni</option>'+Array.from({length:31},(_,k)=>{const v=String(k+1).padStart(2,"0");return '<option value="'+v+'"'+(f.dd===v?" selected":"")+">"+(k+1)+"</option>"}).join("")+"</select>"+
+   '<select class="input" id="fm" aria-label="Mese"><option value="">Tutti i mesi</option>'+MESI.map((m,k)=>{const v=String(k+1).padStart(2,"0");return '<option value="'+v+'"'+(f.mm===v?" selected":"")+">"+cap(m)+"</option>"}).join("")+"</select>"+
+   '<select class="input" id="fy" aria-label="Anno"><option value="">Tutti gli anni</option>'+yrs.map(y=>'<option'+(f.yy===y?" selected":"")+">"+y+"</option>").join("")+"</select>"+
    '<select class="input" id="fs" aria-label="Stato"><option value="">Effettivi e previsti</option><option value="eff"'+(f.s==="eff"?" selected":"")+'>Solo effettivi</option><option value="prev"'+(f.s==="prev"?" selected":"")+">Solo previsti</option></select>"+
-   (any?'<button class="btn sm" data-act="freset">Azzera filtri</button>':"")+'<button class="btn sm" data-act="export">'+ico("Download",15)+"Scarica PDF o Excel</button></div>"+
+   (any?'<button class="btn sm" data-act="freset">Azzera filtri</button>':"")+"</div>"+(f.dd||f.mm||f.yy?'<p class="faint" style="font-size:12.5px;margin:0 0 8px">Il filtro per data cerca in tutti i periodi.</p>':"")+
    '<div class="sumline"><span>'+nMov(list.length)+(list.some(isFut)?" (di cui "+list.filter(isFut).length+(list.filter(isFut).length===1?" previsto)":" previsti)"):"")+'</span><span>Entrate <b class="c-in amt">'+money(sumT(list,"E"))+'</b></span><span>Spese <b class="c-out amt">'+money(sumT(list,"S"))+"</b></span>"+(sumT(list,"T")?'<span>Trasferiti <b class="amt">'+money(sumT(list,"T"))+"</b></span>":"")+"</div>"+
-   (list.length?'<div class="rows">'+html+"</div>"+(list.length>S.shown?'<div style="text-align:center;margin-top:12px"><button class="btn" data-act="more">Mostra altri '+Math.min(150,list.length-S.shown)+" di "+(list.length-S.shown)+"</button></div>":""):'<p class="muted" style="padding:16px 4px;margin:0">'+(any?"Nessun movimento corrisponde ai filtri.":"Nessun movimento in questo periodo.")+"</p>")+"</section></div>"}
+   (list.length?'<div class="rows">'+html+"</div>"+(list.length>S.shown?'<div style="text-align:center;margin-top:12px"><button class="btn" data-act="more">Mostra altri '+Math.min(150,list.length-S.shown)+" di "+(list.length-S.shown)+"</button></div>":""):'<p class="muted" style="padding:16px 4px;margin:0">'+(any?"Nessun movimento corrisponde ai filtri.":"Nessun movimento in questo periodo.")+"</p>")+"</section>"+(S.ro?"":'<div style="text-align:center;margin:4px 0 8px"><button class="btn" data-act="export">'+ico("Download",15)+"Scarica PDF o Excel</button></div>")+"</div>"}
 
 function vConti(){const b=balances(TODAY);const c=cfg();const vis=c.accs.filter(a=>!a.h);const tot=vis.reduce((s,a)=>s+(b.get(a.n)||0),0);
   const trs=S.list.filter(x=>x.t==="T").slice(0,12);
@@ -1660,7 +1661,7 @@ document.addEventListener("click",async e=>{const t=e.target;const q=s=>t.closes
   else if(act==="ptoday"){S.p.anchor=TODAY;if(S.p.mode==="custom")S.p.mode="month";render()}
   else if(act==="pdialog")openPeriod();
   else if(act==="more"){S.shown+=150;render()}
-  else if(act==="freset"){S.f={q:"",t:"",c:"",a:"",g:"",s:""};render()}
+  else if(act==="freset"){S.f={q:"",t:"",c:"",a:"",g:"",s:"",dd:"",mm:"",yy:""};render()}
   else if(act==="export")openExp();
   else if(act==="budset")openBud();
   else if(act==="pwareset"){if(a.dataset.armed){try{localStorage.removeItem("bil.conn");localStorage.removeItem("bil.cache")}catch(_){}location.reload()}else{a.dataset.armed="1";a.textContent="Tocca di nuovo per scollegare";setTimeout(()=>{if(a.isConnected){delete a.dataset.armed;a.textContent="Scollega questa app"}},3500)}}
@@ -1701,6 +1702,7 @@ document.addEventListener("keydown",async e=>{const t=e.target;
 document.addEventListener("focusout",e=>{const t=e.target;if(t.id==="budIn"&&S.editBudget)commitBudget(t)});
 document.addEventListener("change",e=>{const t=e.target;
   if(t.id==="ft"){S.f.t=t.value;if(t.value&&S.f.c&&!S.f.c.startsWith(t.value+"|"))S.f.c="";S.shown=150;render()}
+  else if(t.id==="fd"||t.id==="fm"||t.id==="fy"){S.f[t.id==="fd"?"dd":t.id==="fm"?"mm":"yy"]=t.value;S.shown=150;render()}
   else if(t.id==="fc"){S.f.c=t.value;S.shown=150;render()}
   else if(t.id==="fa"){S.f.a=t.value;S.shown=150;render()}
   else if(t.id==="fg"){S.f.g=t.value;S.shown=150;render()}
