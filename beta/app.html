@@ -1118,15 +1118,15 @@ function vSet(){const c=cfg();const b=balances(TODAY);const w=c.widget||{conti:[
    '<p class="faint" style="font-size:12.5px;margin:10px 0 0">Il widget del budget mostra il budget mensile che imposti nella pagina Budget.</p>'+
    (S.mode==="gas"?widgetNativeHtml():'<p class="faint" style="font-size:12.5px;margin:6px 0 0">Il widget legge i dati dal Google Sheet, quindi funziona con la versione installata su Google (Apps Script). I movimenti inseriti in questa versione non arrivano al widget: per portarli su Google scarica i dati in Excel («Tutto») e importali nell\'app Google da Impostazioni › Importa movimenti.</p>')+"</section>"+
    '<section class="card"><div class="card-h"><h2>Importa movimenti</h2></div><p class="muted" style="margin:0 0 12px;font-size:14px">Carica il file Excel esportato dalla tua vecchia app (fogli Spese, Entrate e Bonifici) oppure quello scaricato da questa app con «Scarica dati» in formato Excel. I movimenti già presenti vengono riconosciuti e saltati.</p>'+(S.ro?"":'<label class="btn" for="impFile">'+ico("Upload",16)+'Scegli file .xlsx</label><input type="file" id="impFile" accept=".xlsx,.xls" hidden>')+'<p class="err" id="impErr"></p></section>'+
-   '<section class="card"><div class="card-h"><h2>Dove sono i tuoi dati</h2></div><p style="margin:0;font-size:14px" class="muted">'+storage+"</p><div style=\"margin-top:12px;display:flex;gap:8px;flex-wrap:wrap\"><button class=\"btn\" data-act=\"export\">"+ico("Download",16)+"Scarica i dati in PDF o Excel</button>"+(S.fbu?'<button class="btn" data-act="fbimport">Importa dal vecchio foglio Google</button><button class="btn danger" data-act="fblogout">Esci dall\'account</button>':"")+"</div></section></div>"}
+   '<section class="card"><div class="card-h"><h2>Dove sono i tuoi dati</h2></div><p style="margin:0;font-size:14px" class="muted">'+storage+"</p><div style=\"margin-top:12px;display:flex;gap:8px;flex-wrap:wrap\"><button class=\"btn\" data-act=\"export\">"+ico("Download",16)+"Scarica i dati in PDF o Excel</button>"+(S.fbu?'<button class="btn" data-act="fbimport">Importa dal vecchio foglio Google</button><button class="btn danger" data-act="fblogout">Esci dall\'account</button><button class="btn danger" data-act="delacc">Elimina account e dati</button>':"")+"</div></section></div>"}
 
 /* ================= sheets & dialogs ================= */
 function drawSheet(){const host=document.getElementById("sheetHost");const s=S.sheet;
   if(!s){host.innerHTML="";document.body.style.overflow="";if(S._hs){S._hs=false;try{history.back()}catch(e){}}return}
   if(!S._hs){S._hs=true;try{history.pushState({sh:1},"")}catch(e){}}
   document.body.style.overflow="hidden";
-  const dlg=["accsel","fix","period"].includes(s.kind);
-  const body={tx:sheetTx,cat:sheetCat,acc:sheetAcc,fix:sheetFix,imp:sheetImp,accsel:sheetAccSel,period:sheetPeriod,ric:sheetRic,prom:sheetProm,card:sheetCard,cardshow:sheetCardShow,exp:sheetExp,bud:sheetBud}[s.kind](s);
+  const dlg=["accsel","fix","period","delacc"].includes(s.kind);
+  const body={tx:sheetTx,cat:sheetCat,acc:sheetAcc,fix:sheetFix,imp:sheetImp,accsel:sheetAccSel,delacc:sheetDelAcc,period:sheetPeriod,ric:sheetRic,prom:sheetProm,card:sheetCard,cardshow:sheetCardShow,exp:sheetExp,bud:sheetBud}[s.kind](s);
   host.innerHTML='<div class="overlay'+(dlg?" center":"")+'" data-close="1"><div class="'+(dlg?"dlg":"sheet")+'" role="dialog" aria-modal="true">'+body+"</div></div>"}
 function closeSheet(){S.sheet=null;drawSheet()}
 const X_BTN='<button type="button" class="round" data-act="close" aria-label="Chiudi">'+ico("X")+"</button>";
@@ -1153,6 +1153,7 @@ function sheetTx(s){const c=cfg();const accs=c.accs.filter(a=>!a.h||a.n===s.a||a
    '<p class="err">'+esc(s.err||"")+'</p><div class="actions">'+(s.id&&!S.ro?'<button type="button" class="btn danger grow" data-act="txdel">'+ico("Trash2",16)+(s.confirm?"Conferma eliminazione":"Elimina")+"</button>":"")+(s.id?"":'<button type="button" class="btn" data-act="txagain">Salva e nuovo</button>')+'<button type="submit" class="btn primary"'+(S.ro?" disabled":"")+">"+ico("Check",16)+"Salva</button></div></form>"}
 async function submitTx(again){readTx();const s=S.sheet;const v=parseAmount(s.v);const fail=m=>{s.err=m;drawSheet()};
   if(!(v>0))return fail("Scrivi un importo maggiore di zero, ad esempio 12,50.");
+  if(v>1e9)return fail("L'importo è troppo grande.");
   if(!/^\d{4}-\d{2}-\d{2}$/.test(s.d))return fail("Scegli una data.");
   if(s.t!=="T"&&!s.c)return fail("Scegli una categoria.");
   if(!s.a)return fail(s.t==="T"?"Scegli il conto di partenza.":"Scegli un conto.");
@@ -1207,6 +1208,13 @@ function sheetFix(s){const cur=balances(TODAY).get(s.n)||0;
 async function submitFix(){const s=S.sheet;const v=parseAmount(document.getElementById("fixV").value);if(!isFinite(v)){s.err="Scrivi il saldo, ad esempio 1250,00.";return drawSheet()}
   const c=clone();const a=c.accs.find(x=>x.n===s.n);if(!a)return closeSheet();const cur=balances(TODAY).get(s.n)||0;a.init=Math.round(((+a.init||0)+(v-cur))*100)/100;
   closeSheet();await write(B.saveCfg(c),"Saldo aggiornato");render()}
+function openDelAcc(){S.sheet={kind:"delacc",err:"",busy:false};drawSheet()}
+function sheetDelAcc(s){return '<div style="display:contents"><h2 class="dlg-t">Elimina account</h2><p class="dlg-sub">Verranno cancellati per sempre tutti i tuoi movimenti, investimenti, carte fedeltà, impostazioni e l\'account stesso. Non si può annullare. Se ti servono, scarica prima i dati da Impostazioni.</p>'+
+   '<label class="field"><span class="flabel">Scrivi ELIMINA per confermare</span><input class="input" id="delT" autocomplete="off" autocapitalize="characters" spellcheck="false"'+(s.busy?" disabled":"")+'></label><p class="err">'+esc(s.err||"")+'</p>'+
+   '<div class="dlg-actions"><button type="button" class="tbtn" data-act="close"'+(s.busy?" disabled":"")+'>Annulla</button><button type="button" class="tbtn" data-act="delgo"'+(s.busy?" disabled":"")+'>'+(s.busy?"Elimino…":"Elimina tutto")+"</button></div></div>"}
+async function doDelAcc(){const s=S.sheet;if(!s||s.busy)return;const t=(document.getElementById("delT")||{}).value||"";
+  if(t.trim().toUpperCase()!=="ELIMINA"){s.err="Scrivi ELIMINA per confermare.";return drawSheet()}
+  s.busy=true;s.err="";drawSheet();try{await gasCall("deleteAccount")}catch(e){if(S.sheet===s){s.busy=false;s.err=(e&&e.message)||"Non è stato possibile eliminare l'account. Riprova.";drawSheet()}}}
 function openAccSel(){S.sheet={kind:"accsel",sel:S.acc,hide:S.hideBal};drawSheet()}
 function sheetAccSel(s){const b=balances(TODAY);const vis=visibleAccs();const tot=vis.reduce((x,a)=>x+(b.get(a.n)||0),0);
   const opt=(v,n,i,k,bal)=>'<button type="button" class="accopt" role="radio" aria-checked="'+(s.sel===v)+'" data-accpick="'+esc(v)+'"><span class="radio"></span>'+badge({i,k},"lg")+'<span class="ao-m"><b>'+esc(n)+'</b><span class="amt">'+short(bal)+"</span></span></button>";
@@ -1557,6 +1565,7 @@ document.addEventListener("click",async e=>{const t=e.target;const q=s=>t.closes
   if(S.sheet){const s=S.sheet;
     if(t.classList&&t.classList.contains("overlay")){closeSheet();return}
     if(q('[data-act="close"]')){closeSheet();return}
+    if(s.kind==="delacc"){if(q('[data-act="delgo"]'))doDelAcc();return}
     if(s.kind==="card"){
       if(el=q("[data-ccol]")){readCard();s.k=el.dataset.ccol;drawSheet();return}
       if(q('[data-act="cardscan"]')){cardScan();return}
@@ -1670,6 +1679,7 @@ document.addEventListener("click",async e=>{const t=e.target;const q=s=>t.closes
     cfgUpdate(c=>{c.widget=Object.assign({conti:[],totale:true},c.widget,{url:v})},v?"Indirizzo del widget salvato":"Indirizzo rimosso")}
   else if(act==="wcopy"){const i=document.getElementById("wLink");if(!i)return;try{await navigator.clipboard.writeText(i.value);toast("Link copiato")}catch(err){i.focus();i.select();let ok=false;try{ok=document.execCommand("copy")}catch(_){}toast(ok?"Link copiato":"Tieni premuto sul link per copiarlo")}}
   else if(act==="fbimport"){toast("Importazione in corso…");try{const n=await gasCall("importOld");if(n==null){toast("Importazione annullata");return}await B.gasLoad();render();toast(n?"Importati "+n+" movimenti":"Nessun movimento da importare")}catch(err){toast("Importazione non riuscita: "+((err&&err.message)||err))}}
+  else if(act==="delacc")openDelAcc();
   else if(act==="fblogout"){if(a.dataset.armed){gasCall("logout")}else{a.dataset.armed="1";a.textContent="Tocca di nuovo per uscire";setTimeout(()=>{if(a.isConnected){delete a.dataset.armed;a.textContent="Esci dall'account"}},3500)}}
   else if(act==="newfut")openTx(null,{d:addDays(TODAY,1)});
   else if(act==="newric")openRic(null);
