@@ -442,6 +442,7 @@ main.main{padding-top:12px;padding-bottom:24px}
 .bn:hover .pill{background:var(--hover)}
 .bn .bdg{position:absolute;top:0;left:calc(50% + 8px);background:var(--fab);color:var(--fab-ink);font-size:11px;font-weight:700;border-radius:999px;min-width:18px;height:18px;padding:0 5px;display:grid;place-items:center}
 .bn.add{color:var(--ink)}
+.ttabs .cardtab{margin-left:0;border-left:0}
 .ttabs .invtab{flex:0 0 auto;width:52px;margin-left:10px;display:grid;place-items:center;padding:8px 0;border-left:1px solid rgba(255,255,255,.35);border-bottom-color:transparent}
 .ttabs button{min-width:0;white-space:nowrap}@media (max-width:370px){.ttabs button{font-size:14px;padding-left:2px;padding-right:2px;letter-spacing:0}}
 .upc .upt{display:flex;align-items:center;justify-content:space-between;width:100%;border:0;background:none;padding:0;color:var(--ink);text-align:left}.upc .upt h2{margin:0}.upc .upt .cv{transition:transform .2s;display:grid}.upc.open .upt .cv{transform:rotate(180deg)}.upc .upbody{margin-top:8px}.upc .upsum{color:var(--muted);font-size:13.5px;margin-top:2px}
@@ -762,7 +763,7 @@ async function afterLoad(){
 const TABS=[["home","Home","House"],["movimenti","Movimenti","ReceiptText"],["*add","Aggiungi","Plus"],["budget","Budget","Target"],["altro","Altro","Ellipsis"]];
 const TITLES={previsioni:"In arrivo",movimenti:"Movimenti",conti:"Conti",grafici:"Grafici",categorie:"Categorie",budget:"Budget",ricorrenti:"Pagamenti regolari",promemoria:"Promemoria",carte:"Carte fedeltà",investimenti:"Investimenti",impostazioni:"Impostazioni",altro:"Altro"};
 const MAINV=["home","movimenti","budget","altro"];
-const tabOf=v=>v==="investimenti"?"home":v==="catdet"?tabOf(S.back||"home"):MAINV.includes(v)?v:"altro";
+const tabOf=v=>v==="investimenti"||(v==="carte"&&S.cfrom==="home")?"home":v==="catdet"?tabOf(S.back||"home"):MAINV.includes(v)?v:"altro";
 function syncText(){if(S.mode==="local")return"Non salvato: copia di prova";if(!S.lastSync)return"Caricamento…";const d=S.lastSync;
   return (S.mode==="gas"?"Sincronizzato · ":"Salvato · ")+String(d.getDate()).padStart(2,"0")+"/"+String(d.getMonth()+1).padStart(2,"0")+"/"+d.getFullYear()+" "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0")}
 function renderDrawer(){
@@ -786,7 +787,7 @@ function renderHeader(){
     h.innerHTML='<div class="hdr-in"><div class="hdr-row homerow"><div class="accsel"><button class="accname" data-act="accsel" aria-label="Scegli il conto">'+ico(a.i,18)+"<span>"+esc(a.n)+"</span>"+ico("ChevronDown",16)+'</button>'+
       '<div class="accbal"><span class="amt" title="'+esc(money(bal))+'">'+(!S.ready?"…":S.hideBal?"••••• €":eur0.format(bal))+"</span>"+(S.acc&&S.ready&&!S.ro?'<button class="hb sm" data-act="editbal" aria-label="Modifica saldo">'+ico("Pencil",17)+"</button>":"")+"</div></div>"+
       '<div class="hdr-actions">'+themeBtn()+'<button class="hb" data-act="togglehide" aria-label="'+(S.hideBal?"Mostra il saldo":"Nascondi il saldo")+'">'+ico(S.hideBal?"EyeOff":"Eye",20)+"</button></div></div>"+
-      '<div class="ttabs" role="tablist"><button role="tab" data-type="S" aria-selected="'+(S.type==="S")+'">SPESE</button><button role="tab" data-type="E" aria-selected="'+(S.type==="E")+'">ENTRATE</button><button class="invtab" data-nav="investimenti" aria-label="Investimenti" title="Investimenti">'+ico("TrendingUp",24)+'</button></div></div>';
+      '<div class="ttabs" role="tablist"><button role="tab" data-type="S" aria-selected="'+(S.type==="S")+'">SPESE</button><button role="tab" data-type="E" aria-selected="'+(S.type==="E")+'">ENTRATE</button><button class="invtab" data-nav="investimenti" aria-label="Investimenti" title="Investimenti">'+ico("TrendingUp",24)+'</button><button class="invtab cardtab" data-nav="carte" aria-label="Carte fedeltà" title="Carte fedeltà">'+ico("CreditCard",24)+'</button></div></div>';
     return}
   let right="";const isMain=MAINV.includes(v);
   if(!S.ro&&v==="conti")right='<button class="hb" data-act="newT" aria-label="Nuovo trasferimento">'+ico("ArrowLeftRight",20)+'</button><button class="hbtn" data-accedit="" aria-label="Nuovo conto">'+ico("Plus",18)+"<span>Conto</span></button>";
@@ -796,7 +797,7 @@ function renderHeader(){
   if(v==="movimenti"||v==="grafici")right='<button class="hbtn" data-act="export" aria-label="Scarica PDF o Excel">'+ico("Download",18)+"<span>Scarica</span></button>";
   if(!S.ro&&v==="carte")right='<button class="hbtn" data-act="newcard" aria-label="Nuova carta">'+ico("Plus",18)+"<span>Nuova</span></button>";
   if(!S.ro&&v==="promemoria")right='<button class="hbtn" data-act="newprom" aria-label="Nuovo promemoria">'+ico("Plus",18)+"<span>Nuovo</span></button>";
-  const back=isMain?"":'<button class="hb back" data-nav="'+(v==="catdet"?(S.back||"home"):v==="investimenti"?"home":"altro")+'" aria-label="Indietro">'+ico("ChevronLeft",22)+"</button>";
+  const back=isMain?"":'<button class="hb back" data-nav="'+(v==="catdet"?(S.back||"home"):v==="investimenti"||(v==="carte"&&S.cfrom==="home")?"home":"altro")+'" aria-label="Indietro">'+ico("ChevronLeft",22)+"</button>";
   h.innerHTML='<div class="hdr-in"><div class="hdr-row page'+(isMain?" top":"")+'">'+(back||"<span></span>")+'<h1 class="htitle">'+esc(v==="catdet"&&S.cd?S.cd.n:TITLES[v]||"")+'</h1><div class="hdr-actions">'+right+(v==="movimenti"||v==="altro"||v==="budget"?themeBtn():"")+"</div></div>"+
     (v==="categorie"?'<div class="ttabs" role="tablist"><button role="tab" data-cattab="S" aria-selected="'+(S.catTab==="S")+'">SPESE</button><button role="tab" data-cattab="E" aria-selected="'+(S.catTab==="E")+'">ENTRATE</button></div>':"")+
     '<div style="height:6px"></div></div>';
@@ -1548,7 +1549,7 @@ window.addEventListener("popstate",e=>{const st=e.state;
   if(st&&st.v&&st.v!==S.view){if(st.cd)S.cd=st.cd;if(st.back)S.back=st.back;_hpop=true;nav(st.v);_hpop=false}});
 
 /* ================= events ================= */
-function nav(v){const pv=S.view;S.view=v;if(v!==pv)hpush();S.editBudget=null;document.body.classList.remove("drawer-open");if(v!=="movimenti")S.shown=150;render();window.scrollTo(0,0)}
+function nav(v){const pv=S.view;if(v==="carte")S.cfrom=pv;S.view=v;if(v!==pv)hpush();S.editBudget=null;document.body.classList.remove("drawer-open");if(v!=="movimenti")S.shown=150;render();window.scrollTo(0,0)}
 function g2(id){const e=document.getElementById(id);return e?e.value:""}
 function cfgUpdate(fn,msg){const c=clone();fn(c);return write(B.saveCfg(c),msg).then(()=>render())}
 document.addEventListener("click",async e=>{const t=e.target;const q=s=>t.closest(s);let el;
