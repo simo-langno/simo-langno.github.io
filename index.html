@@ -213,6 +213,26 @@ function wd_summary(items,cfg,now){
     deleteInv:async function(id){delete ST.inv[id];var b=db.batch();b.delete(uref().collection('inv').doc(String(id)));await commit(b);return true},
     getAccount:async function(){var w=null;try{w=await ensureWid()}catch(e){}return{email:U.email||'',wid:w,old:!!oldConn()}},
     importOld:function(){return importOld()},
+    deleteAccount:async function(){
+      var uid=U.uid,w=ST.wid;
+      try{if(!w){var ws=await metaRef('widget').get();if(ws.exists)w=ws.data().wid}}catch(e){}
+      var cols=['tx','inv','meta'];
+      for(var ci=0;ci<cols.length;ci++){var qs=await uref().collection(cols[ci]).get();var ds=qs.docs;
+        for(var i=0;i<ds.length;i+=300){var b=db.batch();ds.slice(i,i+300).forEach(function(d){b.delete(d.ref)});await b.commit()}}
+      if(w){try{await db.collection('widget').doc(w).delete()}catch(e){console.warn('widget',e)}}
+      try{await uref().delete()}catch(e){}
+      var usr=auth.currentUser;
+      try{await usr.delete()}
+      catch(e){
+        if(e&&e.code==='auth/requires-recent-login'){
+          try{var pv=new firebase.auth.GoogleAuthProvider();await usr.reauthenticateWithPopup(pv);await auth.currentUser.delete()}
+          catch(e2){throw new Error('I dati sono stati cancellati. Per chiudere anche l\'account esci, accedi di nuovo e ripeti "Elimina account".')}
+        }else throw new Error('I dati sono stati cancellati ma l\'account non si è chiuso ('+(e&&e.code||'errore')+'). Riprova.')
+      }
+      try{ls(CK+uid,null)}catch(e){}
+      try{localStorage.clear()}catch(e){}
+      try{await db.terminate();await db.clearPersistence()}catch(e){}
+      location.reload()},
     logout:async function(){try{await auth.signOut()}catch(e){}ls(CK+U.uid,null);try{await db.terminate();await db.clearPersistence()}catch(e){}location.reload()}
   };
   async function saveItems(arr,wait,skipExisting){
