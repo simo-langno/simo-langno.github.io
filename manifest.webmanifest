@@ -1,7 +1,7 @@
 {
   "id": "./",
-  "name": "Il mio bilancio",
-  "short_name": "Bilancio",
+  "name": "Savy",
+  "short_name": "Savy",
   "description": "Spese, entrate, conti, budget e previsioni, collegati al tuo Foglio Google.",
   "lang": "it",
   "start_url": "./",

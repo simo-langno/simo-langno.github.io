@@ -1,4 +1,4 @@
-/* Il mio bilancio - service worker: l'app si apre anche senza connessione.
+/* Savy - service worker: l'app si apre anche senza connessione.
    I dati arrivano sempre dal Foglio Google (l'app tiene da sola una copia dell'ultima apertura). */
 const VERSION = 'bilancio-v5';
 const SHELL = ['./', './index.html', './app.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './maskable-512.png', './apple-touch-icon.png'];
