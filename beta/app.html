@@ -1,4 +1,4 @@
-<title>Il mio bilancio</title>
+<title>Savy</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <style>
 /* Layout: green header band (account selector, balance, SPESE/ENTRATE), period card with large donut and yellow add button,
@@ -506,7 +506,7 @@ main.main{padding-top:12px;padding-bottom:24px}
 
 <nav class="bnav" id="bnav" aria-label="Sezioni"></nav>
 <div class="shell">
-  <header class="hdr" id="hdr"><div class="hdr-in"><div class="hdr-row"><div class="accsel"><span class="accname">Il mio bilancio</span></div></div></div></header>
+  <header class="hdr" id="hdr"><div class="hdr-in"><div class="hdr-row"><div class="accsel"><span class="accname">Savy</span></div></div></div></header>
   <main class="main" id="view"><div class="loading">Caricamento dei movimenti…</div></main>
 </div>
 <div id="fabHost"></div>
@@ -772,7 +772,7 @@ function renderDrawer(){
   el.innerHTML=TABS.map(([v,l,i])=>v==="*add"?'<button class="bn add" data-act="new" aria-label="Nuovo movimento"'+(S.ro||!S.ready?" disabled":"")+'><span class="plus">'+ico("Plus",30)+"</span></button>":
    '<button class="bn" data-tab="'+v+'" data-nav="'+v+'"'+(cur===v?' aria-current="page"':"")+'><span class="pill">'+ico(i,24)+"</span><span>"+l+"</span>"+(v==="altro"&&n?'<span class="bdg">'+n+"</span>":"")+"</button>").join("");
 }
-function vAltro(){const c=cfg();const name=c.nome||"Il mio bilancio";const ini=(c.nome||"€").trim().charAt(0).toUpperCase();
+function vAltro(){const c=cfg();const name=c.nome||"Savy";const ini=(c.nome||"€").trim().charAt(0).toUpperCase();
   const cp=duePro().length,cr=dueRic().length;
   const gi=(v,l,sub,i,cnt)=>'<button class="gi" '+(v.charAt(0)==="*"?'data-act="'+v.slice(1)+'"':'data-nav="'+v+'"')+'><span class="gic">'+ico(i,22)+'</span><span class="gt"><b>'+l+"</b><span>"+sub+"</span></span>"+(cnt?'<span class="cnt">'+cnt+"</span>":"")+'<span class="chev">'+ico("ChevronRight",18)+"</span></button>";
   return '<div class="altro"><section class="prof"><span class="avatar">'+esc(ini)+'</span><div class="pi"><b>'+esc(name)+"</b><span>Saldo totale: "+(S.hideBal?"••••• €":money(totalBal(TODAY)))+"</span><span>"+esc(syncText())+'</span></div><button class="psync" data-act="sync" aria-label="Sincronizza ora">'+ico("RefreshCw",18)+"</button></section>"+
@@ -1489,7 +1489,7 @@ function pctQ(v){const p=v*100;return (p>0&&p<10?p.toFixed(1).replace(".",","):S
 function balLabel(d){return "Saldo dei conti al "+fmtDate(d,{day:"numeric",month:"short",year:"numeric"})+(d>TODAY?" (previsto)":"")}
 async function buildPdf(o,D){const JS=await loadPDF();const doc=new JS({unit:"pt",format:"a4",compress:true});const W=doc.internal.pageSize.getWidth(),H=doc.internal.pageSize.getHeight();
   const green=[44,89,71],now=new Date(),m2=v=>pdfTxt(money(v));let y=100;
-  doc.setFillColor(green[0],green[1],green[2]);doc.rect(0,0,W,72,"F");doc.setTextColor(255,255,255);doc.setFont("helvetica","bold");doc.setFontSize(20);doc.text("Il mio bilancio",40,38);
+  doc.setFillColor(green[0],green[1],green[2]);doc.rect(0,0,W,72,"F");doc.setTextColor(255,255,255);doc.setFont("helvetica","bold");doc.setFontSize(20);doc.text("Savy",40,38);
   doc.setFont("helvetica","normal");doc.setFontSize(10.5);doc.text(pdfTxt(cap(D.title)+" · "+D.accName),40,57);
   const who=pdfTxt(cfg().nome||"");if(who)doc.text(who,W-40,38,{align:"right"});doc.setTextColor(30,30,30);
   const base={font:"helvetica",fontSize:9.5,cellPadding:5,lineColor:[220,226,222],lineWidth:.5,textColor:[30,30,30]};
@@ -1516,8 +1516,8 @@ async function buildPdf(o,D){const JS=await loadPDF();const doc=new JS({unit:"pt
   return doc.output("arraybuffer")}
 async function buildXlsx(o,D){const X=await loadXLSX();const wb=X.utils.book_new();const EUR='#,##0.00 "€";-#,##0.00 "€"';
   const fmt=(ws,r,c,z)=>{const a=X.utils.encode_cell({r,c});if(ws[a])ws[a].z=z};
-  wb.Props={Title:"Il mio bilancio "+D.title,Author:cfg().nome||""};
-  if(o.sum){const rows=[["Il mio bilancio"],["Periodo",cap(D.title)],["Conto",D.accName],[],["Voce","Importo"],["Entrate",D.E],["Spese",D.U],["Saldo (entrate − spese)",Math.round((D.E-D.U)*100)/100],[balLabel(D.startDate),D.startBal],[balLabel(D.endDate),D.endBal]];
+  wb.Props={Title:"Savy "+D.title,Author:cfg().nome||""};
+  if(o.sum){const rows=[["Savy"],["Periodo",cap(D.title)],["Conto",D.accName],[],["Voce","Importo"],["Entrate",D.E],["Spese",D.U],["Saldo (entrate − spese)",Math.round((D.E-D.U)*100)/100],[balLabel(D.startDate),D.startBal],[balLabel(D.endDate),D.endBal]];
     const cells=[];for(let r=5;r<=9;r++)cells.push([r,1,EUR]);
     const addCat=(t,a)=>{if(!a.arr.length)return;rows.push([]);rows.push([t,"Movimenti","Quota","Totale"]);for(const e of a.arr){rows.push([e.n,e.cnt,Math.round(e.v/a.tot*10000)/10000,e.v]);cells.push([rows.length-1,2,"0.0%"]);cells.push([rows.length-1,3,EUR])}};
     addCat("Spese per categoria",D.cs);addCat("Entrate per categoria",D.ce);

@@ -11,7 +11,7 @@
 <link rel="manifest" href="../manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="192x192" href="../icon-192.png">
 <link rel="apple-touch-icon" href="../apple-touch-icon.png">
-<title>Il mio bilancio</title>
+<title>Savy</title>
 <style>
 html,body{margin:0;background:#EEF3FF}
 @media (prefers-color-scheme: dark){html,body{background:#0B1020}}
@@ -147,7 +147,7 @@ function wd_summary(items,cfg,now){
 
 </script>
 <script>
-/* Il mio bilancio: accesso con Google, dati nel tuo spazio privato su Firebase (Firestore), copia offline sul dispositivo. */
+/* Savy: accesso con Google, dati nel tuo spazio privato su Firebase (Firestore), copia offline sul dispositivo. */
 (function(){
   var FB={apiKey:"AIzaSyB__ivbP9WfeXjy996R9fpZi8h35RcCI9M",authDomain:"il-mio-bilancio-9ddb8.firebaseapp.com",projectId:"il-mio-bilancio-9ddb8",storageBucket:"il-mio-bilancio-9ddb8.firebasestorage.app",messagingSenderId:"704824820388",appId:"1:704824820388:web:074e9e5dc9154c1f0a5c31"};
   var CONN='bil.conn',NOIMP='bil.noimp';
@@ -168,11 +168,11 @@ function wd_summary(items,cfg,now){
   /* ---------- accesso ---------- */
   function login(msg){return new Promise(function(res){
     var boot=document.getElementById('boot');if(boot)boot.remove();
-    var d=sheet('<h1>Il mio bilancio</h1><p>Accedi con il tuo account Google: i tuoi dati restano privati, si sincronizzano su tutti i tuoi dispositivi e funzionano anche senza connessione.</p><button id="go" type="button">Accedi con Google</button><p class="err" id="err" role="alert">'+esc(msg||'')+'</p>');
+    var d=sheet('<h1>Savy</h1><p>Accedi con il tuo account Google: i tuoi dati restano privati, si sincronizzano su tutti i tuoi dispositivi e funzionano anche senza connessione.</p><button id="go" type="button">Accedi con Google</button><p class="err" id="err" role="alert">'+esc(msg||'')+'</p>');
     d.querySelector('#go').addEventListener('click',function(){
       var b=this,err=d.querySelector('#err');b.disabled=true;err.textContent='';
       var prov=new firebase.auth.GoogleAuthProvider();prov.setCustomParameters({prompt:'select_account'});
-      var done=false,un=function(){};function ok(u){if(done)return;done=true;try{un()}catch(_){}d.innerHTML='<div class="box"><img src="icon-192.png" alt=""><h1>Il mio bilancio</h1><p>Accesso riuscito, apro il bilancio…</p></div>';res(u)}
+      var done=false,un=function(){};function ok(u){if(done)return;done=true;try{un()}catch(_){}d.innerHTML='<div class="box"><img src="icon-192.png" alt=""><h1>Savy</h1><p>Accesso riuscito, apro il bilancio…</p></div>';res(u)}
       un=auth.onAuthStateChanged(function(u){if(u)ok(u)});
       auth.signInWithPopup(prov).then(function(r){ok(r.user)},function(e){
         var c=e&&e.code||'';if(auth.currentUser){ok(auth.currentUser);return}
