@@ -234,8 +234,10 @@ function wd_summary(items,cfg,now){
     await metaRef('widget').set({wid:w});ST.wid=w;return w}
   var pubT=null;
   function schedulePublish(){clearTimeout(pubT);pubT=setTimeout(publish,2500)}
+  window.__bilPub=schedulePublish;
   async function publish(){
     try{var w=await ensureWid();var S=wd_summary(ST.items,ST.cfg||{},new Date());
+      try{S.p=JSON.parse(localStorage.getItem('bil.pal')||'"blu"')||'blu'}catch(e){S.p='blu'}
       await db.collection('widget').doc(w).set({owner:U.uid,j:JSON.stringify(S),t:Date.now()})}catch(e){console.warn('riepilogo widget',e)}}
   document.addEventListener('visibilitychange',function(){if(document.hidden&&U&&ST.cfg)publish()});
 
