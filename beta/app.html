@@ -842,7 +842,7 @@ function bigDonut(arr,tot,t,fut){
   const ct=centerFmt(tot);
   return '<div class="dwrap"><svg viewBox="0 0 300 300" role="img" aria-label="'+(t==="S"?"Spese":"Entrate")+" per categoria: totale "+esc(short(tot))+'"><defs>'+defs+"</defs>"+segs+inner+'</svg><div class="dctr"><b class="amt" style="font-size:28px;font-size:'+(ct.length<=6?12:ct.length<=8?10.5:ct.length<=10?9:8)+'cqi">'+esc(ct)+"</b><span>"+(t==="S"?"spese":"entrate")+(S.acc?" · "+esc(S.acc):"")+"</span>"+(fut?"<span>di cui previste "+esc(short(fut))+"</span>":"")+"</div></div>";
 }
-function txMini(x){const sub=x.n&&!S.acc?esc(x.a):"";const t1=x.n||cap(fmtDate(x.d,{weekday:"long"}))+(S.acc?"":" · "+x.a);
+function txMini(x){const sub=cap(fmtDate(x.d,{weekday:"long",day:"numeric",month:"long",year:x.d.slice(0,4)===TODAY.slice(0,4)?undefined:"numeric"}))+(S.acc?"":" · "+esc(x.a));const t1=x.n||x.c;
   return '<button class="tx'+(isFut(x)?" fut":"")+'" data-edit="'+esc(x.id)+'"><span class="d">'+sd(x.d)+(x.d.slice(0,4)!==TODAY.slice(0,4)?"<br>"+x.d.slice(0,4):"")+'</span><span class="m"><span class="t1">'+esc(t1)+(isFut(x)?'<span class="pill fut">Previsto</span>':"")+"</span>"+(sub?'<span class="t2">'+sub+"</span>":"")+'</span><span class="amt '+(x.t==="E"?"c-in":"")+'">'+signed(x.v,x.t)+"</span></button>"}
 function catCard(e,tot,list,t){const key=t+"|"+e.n;
   return '<div class="ccard"><button class="ccard-h" data-catpage="'+esc(key)+'" aria-label="Apri '+esc(e.n)+'">'+badge(e,"lg")+'<span class="cn">'+esc(e.n)+'</span><span class="cp">'+pctI(e.v/tot)+'</span><span class="cv amt">'+short(e.v)+'</span><span class="chev">'+ico("ChevronRight",18)+"</span></button></div>"}
