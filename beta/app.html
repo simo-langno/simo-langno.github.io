@@ -165,7 +165,7 @@ button.row:hover{background:var(--hover)}
 .seg{display:inline-flex;background:var(--hover);padding:3px;border-radius:10px;gap:2px}
 .seg button{border:0;background:none;border-radius:8px;padding:6px 12px;font-size:13.5px;font-weight:500;color:var(--muted)}
 .seg button[aria-pressed="true"]{background:var(--card);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.14)}
-.input,select.input{background:var(--sunk);border:1px solid var(--line);border-radius:12px;padding:10px 12px;width:100%;min-width:0}
+.datebtn{display:flex;align-items:center;gap:8px;text-align:left;color:var(--ink);cursor:pointer}.input,select.input{background:var(--sunk);border:1px solid var(--line);border-radius:12px;padding:10px 12px;width:100%;min-width:0}
 .input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
 .field{display:flex;flex-direction:column;gap:6px;min-width:0}
 .field>label,.flabel{font-size:12px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:500}
@@ -898,14 +898,14 @@ function vPrev(){const hz=S.hz;const t0=pd(TODAY);const until=iso(new Date(t0.ge
    '<p class="faint" style="font-size:12.5px;margin:0 4px">Un movimento con data futura resta "previsto" e non cambia il saldo di oggi. Dal giorno della sua data entra nel saldo da solo: se l\'importo cambia, modificalo.</p></div>'}
 
 
-function filtered(){const f=S.f;const q=f.q.trim().toLowerCase();const dp=f.dd||f.mm||f.yy;
-  return (dp?S.list:inRange()).filter(x=>(!f.yy||x.d.slice(0,4)===f.yy)&&(!f.mm||x.d.slice(5,7)===f.mm)&&(!f.dd||x.d.slice(8,10)===f.dd)&&(!f.s||(f.s==="prev"?x.d>TODAY:x.d<=TODAY))&&(!f.t||x.t===f.t)&&(!f.c||(x.t+"|"+x.c)===f.c)&&(!f.a||x.a===f.a||x.to===f.a)&&(!q||(x.c+" "+x.n+" "+x.a+" "+x.to+" "+x.g+" "+String(x.v).replace(".",",")).toLowerCase().includes(q)))}
+function filtered(){const f=S.f;const q=f.q.trim().toLowerCase();const dp=f.d1;
+  return (dp?S.list:inRange()).filter(x=>(!f.d1||(x.d>=f.d1&&x.d<=(f.d2||f.d1)))&&(!f.s||(f.s==="prev"?x.d>TODAY:x.d<=TODAY))&&(!f.t||x.t===f.t)&&(!f.c||(x.t+"|"+x.c)===f.c)&&(!f.a||x.a===f.a||x.to===f.a)&&(!q||(x.c+" "+x.n+" "+x.a+" "+x.to+" "+x.g+" "+String(x.v).replace(".",",")).toLowerCase().includes(q)))}
 function txRow(x){const ci=x.t==="T"?null:catInfo(x.t,x.c);
   const title=x.t==="T"?esc(x.a)+" → "+esc(x.to):esc(ci.n);const sub=[x.t==="T"?"Trasferimento":esc(x.a),x.n?esc(x.n):""].filter(Boolean).join(" · ");
   return '<button class="row'+(isFut(x)?" fut":"")+'" data-edit="'+esc(x.id)+'">'+txBadge(x)+'<span class="main"><span class="t1">'+title+(isFut(x)?'<span class="pill fut">Previsto</span>':"")+'</span><span class="t2">'+sub+'</span></span><span class="end"><span class="amt '+(x.t==="E"?"c-in":x.t==="T"?"c-tr":"")+'">'+signed(x.v,x.t)+"</span></span></button>"}
 function vMov(){const list=filtered();const f=S.f;const c=cfg();const base=inRange();
   const opts=t=>{const used=[...new Set(base.filter(x=>x.t===t).map(x=>x.c))].sort((a,b)=>a.localeCompare(b,"it"));return used.map(n=>'<option value="'+t+"|"+esc(n)+'"'+(f.c===t+"|"+n?" selected":"")+">"+esc(n)+"</option>").join("")};
-  const any=f.t||f.c||f.a||f.q||f.s||f.dd||f.mm||f.yy;const yrs=[...new Set(S.list.map(x=>x.d.slice(0,4)))].sort().reverse();let html="",last="",shown=0;
+  const any=f.t||f.c||f.a||f.q||f.s||f.d1;const yrs=[...new Set(S.list.map(x=>x.d.slice(0,4)))].sort().reverse();let html="",last="",shown=0;
   const dayTot=new Map();for(const x of list){if(x.t==="T")continue;dayTot.set(x.d,(dayTot.get(x.d)||0)+(x.t==="E"?x.v:-x.v))}
   for(const x of list){if(shown>=S.shown)break;if(x.d!==last){last=x.d;const dt=dayTot.get(x.d)||0;
     html+='<div class="dayh"><span>'+cap(fmtDate(x.d,{weekday:"long",day:"numeric",month:"long",year:x.d.slice(0,4)===TODAY.slice(0,4)?undefined:"numeric"}))+'</span><span class="amt '+(dt>0?"c-in":"")+'">'+(dt?(dt>0?"+":"−")+eur.format(Math.abs(dt)):"")+"</span></div>"}html+=txRow(x);shown++}
@@ -914,11 +914,9 @@ function vMov(){const list=filtered();const f=S.f;const c=cfg();const base=inRan
    '<select class="input" id="ft" aria-label="Tipo"><option value="">Tutti i tipi</option><option value="S"'+(f.t==="S"?" selected":"")+'>Spese</option><option value="E"'+(f.t==="E"?" selected":"")+'>Entrate</option><option value="T"'+(f.t==="T"?" selected":"")+'>Trasferimenti</option></select>'+
    '<select class="input" id="fc" aria-label="Categoria"><option value="">Tutte le categorie</option><optgroup label="Spese">'+opts("S")+'</optgroup><optgroup label="Entrate">'+opts("E")+"</optgroup></select>"+
    '<select class="input" id="fa" aria-label="Conto"><option value="">Tutti i conti</option>'+c.accs.map(a=>'<option'+(f.a===a.n?" selected":"")+">"+esc(a.n)+"</option>").join("")+"</select>"+
-   '<select class="input" id="fd" aria-label="Giorno"><option value="">Tutti i giorni</option>'+Array.from({length:31},(_,k)=>{const v=String(k+1).padStart(2,"0");return '<option value="'+v+'"'+(f.dd===v?" selected":"")+">"+(k+1)+"</option>"}).join("")+"</select>"+
-   '<select class="input" id="fm" aria-label="Mese"><option value="">Tutti i mesi</option>'+MESI.map((m,k)=>{const v=String(k+1).padStart(2,"0");return '<option value="'+v+'"'+(f.mm===v?" selected":"")+">"+cap(m)+"</option>"}).join("")+"</select>"+
-   '<select class="input" id="fy" aria-label="Anno"><option value="">Tutti gli anni</option>'+yrs.map(y=>'<option'+(f.yy===y?" selected":"")+">"+y+"</option>").join("")+"</select>"+
+   '<button type="button" class="input datebtn" data-act="fdate" aria-label="Periodo">'+ico("CalendarDays",18)+"<span>"+esc(f.d1?(f.d2&&f.d2!==f.d1?fmtDate(f.d1,{day:"numeric",month:"short"})+" – "+fmtDate(f.d2,{day:"numeric",month:"short",year:"numeric"}):fmtDate(f.d1,{day:"numeric",month:"long",year:"numeric"})):"Tutte le date")+"</span></button>"+
    '<select class="input" id="fs" aria-label="Stato"><option value="">Effettivi e previsti</option><option value="eff"'+(f.s==="eff"?" selected":"")+'>Solo effettivi</option><option value="prev"'+(f.s==="prev"?" selected":"")+">Solo previsti</option></select>"+
-   (any?'<button class="btn sm" data-act="freset">Azzera filtri</button>':"")+"</div>"+(f.dd||f.mm||f.yy?'<p class="faint" style="font-size:12.5px;margin:0 0 8px">Il filtro per data cerca in tutti i periodi.</p>':"")+
+   (any?'<button class="btn sm" data-act="freset">Azzera filtri</button>':"")+"</div>"+(f.d1?'<p class="faint" style="font-size:12.5px;margin:0 0 8px">Il filtro per data cerca in tutti i periodi.</p>':"")+
    '<div class="sumline"><span>'+nMov(list.length)+(list.some(isFut)?" (di cui "+list.filter(isFut).length+(list.filter(isFut).length===1?" previsto)":" previsti)"):"")+'</span><span>Entrate <b class="c-in amt">'+money(sumT(list,"E"))+'</b></span><span>Spese <b class="c-out amt">'+money(sumT(list,"S"))+"</b></span>"+(sumT(list,"T")?'<span>Trasferiti <b class="amt">'+money(sumT(list,"T"))+"</b></span>":"")+"</div>"+
    (list.length?'<div class="rows">'+html+"</div>"+(list.length>S.shown?'<div style="text-align:center;margin-top:12px"><button class="btn" data-act="more">Mostra altri '+Math.min(150,list.length-S.shown)+" di "+(list.length-S.shown)+"</button></div>":""):'<p class="muted" style="padding:16px 4px;margin:0">'+(any?"Nessun movimento corrisponde ai filtri.":"Nessun movimento in questo periodo.")+"</p>")+"</section>"+(S.ro?"":'<div style="text-align:center;margin:4px 0 8px"><button class="btn" data-act="export">'+ico("Download",15)+"Scarica PDF o Excel</button></div>")+"</div>"}
 
@@ -1215,6 +1213,8 @@ function sheetAccSel(s){const b=balances(TODAY);const vis=visibleAccs();const to
   return '<h2 class="dlg-t">Seleziona conto</h2><label class="switchrow"><span>Nascondi il saldo dalla schermata principale</span><input type="checkbox" id="hideBal"'+(s.hide?" checked":"")+' role="switch"></label>'+
    '<div class="accopts" role="radiogroup">'+opt("","Totale","Coins","teal",tot)+vis.map(a=>opt(a.n,a.n,a.i,a.k,b.get(a.n)||0)).join("")+"</div>"+
    '<div class="dlg-actions"><button type="button" class="tbtn" data-act="close">Annulla</button><button type="button" class="tbtn" data-act="accselok">Seleziona</button></div>'}
+function openDateF(){const f=S.f;S.sheet={kind:"period",mov:true,a:f.d1||null,b:f.d2&&f.d2!==f.d1?f.d2:null,all:!f.d1,extra:0};drawSheet();
+  setTimeout(()=>{const box=document.getElementById("calScroll");if(!box||!S.sheet)return;const target=box.querySelector('[data-m="'+(S.sheet.a||TODAY).slice(0,7)+'"]');if(target)box.scrollTop+=target.getBoundingClientRect().top-box.getBoundingClientRect().top-8},20)}
 function openPeriod(){const r=range();S.sheet={kind:"period",a:S.p.mode==="all"?null:r[0],b:S.p.mode==="all"?null:r[1],all:S.p.mode==="all",extra:0};drawSheet();
   setTimeout(()=>{const box=document.getElementById("calScroll");if(!box||!S.sheet)return;const target=box.querySelector('[data-m="'+(S.sheet.a||TODAY).slice(0,7)+'"]');if(target)box.scrollTop+=target.getBoundingClientRect().top-box.getBoundingClientRect().top-8},20)}
 function sheetPeriod(s){const mi=d=>+d.slice(0,4)*12+(+d.slice(5,7)-1);const tm=mi(TODAY);
@@ -1584,7 +1584,7 @@ document.addEventListener("click",async e=>{const t=e.target;const q=s=>t.closes
       if(el=q("[data-pday]")){const d=el.dataset.pday;s.all=false;if(!s.a||s.b){s.a=d;s.b=null}else if(d<s.a){s.b=s.a;s.a=d}else s.b=d;
         const box=document.getElementById("calScroll");const st=box?box.scrollTop:0;drawSheet();const nb=document.getElementById("calScroll");if(nb)nb.scrollTop=st;return}
       if(q('[data-act="calmore"]')){const box=document.getElementById("calScroll");const h0=box?box.scrollHeight:0,st=box?box.scrollTop:0;s.extra++;drawSheet();const nb=document.getElementById("calScroll");if(nb)nb.scrollTop=st+(nb.scrollHeight-h0);return}
-      if(q('[data-act="pok"]')){if(s.all)S.p.mode="all";else if(s.a&&(!s.b||s.b===s.a)){S.p.mode="day";S.p.anchor=s.a}else if(s.a){S.p.mode="custom";S.p.from=s.a;S.p.to=s.b}closeSheet();S.shown=150;render();return}}
+      if(q('[data-act="pok"]')){if(s.mov){S.f.d1=s.all?"":(s.a||"");S.f.d2=s.all?"":(s.b||s.a||"");closeSheet();S.shown=150;render();return}if(s.all)S.p.mode="all";else if(s.a&&(!s.b||s.b===s.a)){S.p.mode="day";S.p.anchor=s.a}else if(s.a){S.p.mode="custom";S.p.from=s.a;S.p.to=s.b}closeSheet();S.shown=150;render();return}}
     if(s.kind==="ric"){
       if(el=q("[data-rt]")){readRic();s.t=el.dataset.rt;if(s.c&&!catList(s.t,true).some(x=>x.n===s.c))s.c="";drawSheet();return}
       if(el=q("[data-rpick]")){readRic();s.c=el.dataset.rpick;drawSheet();return}
@@ -1661,7 +1661,8 @@ document.addEventListener("click",async e=>{const t=e.target;const q=s=>t.closes
   else if(act==="ptoday"){S.p.anchor=TODAY;if(S.p.mode==="custom")S.p.mode="month";render()}
   else if(act==="pdialog")openPeriod();
   else if(act==="more"){S.shown+=150;render()}
-  else if(act==="freset"){S.f={q:"",t:"",c:"",a:"",g:"",s:"",dd:"",mm:"",yy:""};render()}
+  else if(act==="fdate")openDateF();
+  else if(act==="freset"){S.f={q:"",t:"",c:"",a:"",g:"",s:"",d1:"",d2:""};render()}
   else if(act==="export")openExp();
   else if(act==="budset")openBud();
   else if(act==="pwareset"){if(a.dataset.armed){try{localStorage.removeItem("bil.conn");localStorage.removeItem("bil.cache")}catch(_){}location.reload()}else{a.dataset.armed="1";a.textContent="Tocca di nuovo per scollegare";setTimeout(()=>{if(a.isConnected){delete a.dataset.armed;a.textContent="Scollega questa app"}},3500)}}
@@ -1702,7 +1703,6 @@ document.addEventListener("keydown",async e=>{const t=e.target;
 document.addEventListener("focusout",e=>{const t=e.target;if(t.id==="budIn"&&S.editBudget)commitBudget(t)});
 document.addEventListener("change",e=>{const t=e.target;
   if(t.id==="ft"){S.f.t=t.value;if(t.value&&S.f.c&&!S.f.c.startsWith(t.value+"|"))S.f.c="";S.shown=150;render()}
-  else if(t.id==="fd"||t.id==="fm"||t.id==="fy"){S.f[t.id==="fd"?"dd":t.id==="fm"?"mm":"yy"]=t.value;S.shown=150;render()}
   else if(t.id==="fc"){S.f.c=t.value;S.shown=150;render()}
   else if(t.id==="fa"){S.f.a=t.value;S.shown=150;render()}
   else if(t.id==="fg"){S.f.g=t.value;S.shown=150;render()}
