@@ -192,11 +192,27 @@ function wd_summary(items,cfg,now){
   /* scrive subito in locale; senza connessione la scrittura resta in coda e parte da sola */
   function commit(batch,wait){var p=batch.commit();p.catch(function(e){console.warn('scrittura',e);try{window.__bilWriteErr&&window.__bilWriteErr(e)}catch(_){}});
     return wait?p:Promise.race([p,later(1500)])}
+  /* lettura incrementale: dopo la prima volta si rileggono solo i documenti cambiati (campo u), non tutto lo storico */
   async function load(){
-    var r=await Promise.all([uref().collection('tx').get(),uref().collection('inv').get(),metaRef('cfg').get()]);
-    var items={};r[0].forEach(function(d){var it=(d.data()||{}).items||{};for(var k in it)items[k]=it[k]});
-    var inv={};r[1].forEach(function(d){inv[d.id]=d.data()});
-    var cfg=null;if(r[2].exists){try{cfg=JSON.parse(r[2].data().json)}catch(e){cfg=null}}
+    var uid=U.uid,sk='bil.sync.'+uid,base=null,sy=null,now=Date.now();
+    try{base=JSON.parse(ls(CK+uid)||'null');sy=JSON.parse(ls(sk)||'null')}catch(e){base=null;sy=null}
+    var incr=!!(base&&base.items&&sy&&sy.t&&sy.f&&now-sy.f<7*864e5);
+    var items,inv,cfg=null;
+    if(incr){
+      var since=new Date(sy.t-300000);
+      var r=await Promise.all([uref().collection('tx').where('u','>',since).get(),uref().collection('inv').where('u','>',since).get(),metaRef('cfg').get()]);
+      items=base.items;inv=base.inv||{};
+      r[0].forEach(function(d){var m=d.id;for(var k in items){if(mk(items[k].d)===m)delete items[k]}var it=(d.data()||{}).items||{};for(var k2 in it)items[k2]=it[k2]});
+      r[1].forEach(function(d){var x=d.data()||{};if(x.x)delete inv[d.id];else{delete x.u;inv[d.id]=x}});
+      if(r[2].exists){try{cfg=JSON.parse(r[2].data().json)}catch(e){cfg=null}}
+      ls(sk,JSON.stringify({t:now,f:sy.f}))
+    }else{
+      var r2=await Promise.all([uref().collection('tx').get(),uref().collection('inv').get(),metaRef('cfg').get()]);
+      items={};r2[0].forEach(function(d){var it=(d.data()||{}).items||{};for(var k in it)items[k]=it[k]});
+      inv={};r2[1].forEach(function(d){var x=d.data()||{};if(x.x)return;delete x.u;inv[d.id]=x});
+      if(r2[2].exists){try{cfg=JSON.parse(r2[2].data().json)}catch(e){cfg=null}}
+      ls(sk,JSON.stringify({t:now,f:now}))
+    }
     ST.items=items;ST.inv=inv;ST.cfg=cfg}
   var OPS={
     getData:async function(){await load();schedulePublish();return JSON.stringify({items:ST.items,inv:ST.inv,cfg:ST.cfg})},
@@ -204,13 +220,13 @@ function wd_summary(items,cfg,now){
     deleteItems:async function(json){
       var ids=JSON.parse(json),by={};
       ids.forEach(function(id){var o=ST.items[id];if(!o)return;var m=mk(o.d);(by[m]=by[m]||{})[id]=FV.delete();delete ST.items[id]});
-      var b=db.batch();Object.keys(by).forEach(function(m){b.set(txRef(m),{items:by[m]},{merge:true})});
+      var b=db.batch();Object.keys(by).forEach(function(m){b.set(txRef(m),{items:by[m],u:FV.serverTimestamp()},{merge:true})});
       await commit(b);schedulePublish();return true},
     saveCfg:async function(json){ST.cfg=typeof json==='string'?JSON.parse(json):json;
       var b=db.batch();b.set(metaRef('cfg'),{json:typeof json==='string'?json:JSON.stringify(json),t:Date.now()});await commit(b);schedulePublish();return true},
     saveInv:async function(json){var it=JSON.parse(json),id=String(it.id);delete it.id;ST.inv[id]=it;
-      var b=db.batch();b.set(uref().collection('inv').doc(id),it);await commit(b);return true},
-    deleteInv:async function(id){delete ST.inv[id];var b=db.batch();b.delete(uref().collection('inv').doc(String(id)));await commit(b);return true},
+      var b=db.batch();var it2=Object.assign({},it,{u:FV.serverTimestamp()});b.set(uref().collection('inv').doc(id),it2);await commit(b);return true},
+    deleteInv:async function(id){delete ST.inv[id];var b=db.batch();b.set(uref().collection('inv').doc(String(id)),{x:1,u:FV.serverTimestamp()});await commit(b);return true},
     getAccount:async function(){var w=null;try{w=await ensureWid()}catch(e){}return{email:U.email||'',wid:w,old:!!oldConn()}},
     importOld:function(){return importOld()},
     deleteAccount:async function(){
@@ -242,7 +258,7 @@ function wd_summary(items,cfg,now){
       if(o&&mk(o.d)!==m){var om=mk(o.d);(by[om]=by[om]||{})[id]=FV.delete()}
       ST.items[id]=c});
     var keys=Object.keys(by);
-    for(var i=0;i<keys.length;i+=200){var b=db.batch();keys.slice(i,i+200).forEach(function(m){b.set(txRef(m),{items:by[m]},{merge:true})});await commit(b,wait)}
+    for(var i=0;i<keys.length;i+=200){var b=db.batch();keys.slice(i,i+200).forEach(function(m){b.set(txRef(m),{items:by[m],u:FV.serverTimestamp()},{merge:true})});await commit(b,wait)}
     schedulePublish();return wait?n:true}
   /* ---------- riepilogo per i widget ---------- */
   var ALF='abcdefghijkmnpqrstuvwxyz23456789';
@@ -277,7 +293,7 @@ function wd_summary(items,cfg,now){
     var arr=Object.keys(d.items||{}).map(function(id){return Object.assign({id:id},d.items[id])});
     var n=await saveItems(arr,true,true);
     var invIds=Object.keys(d.inv||{}).filter(function(id){return!ST.inv[id]});
-    for(var i=0;i<invIds.length;i+=400){var b=db.batch();invIds.slice(i,i+400).forEach(function(id){var x=d.inv[id];ST.inv[id]=x;b.set(uref().collection('inv').doc(id),x)});await commit(b,true)}
+    for(var i=0;i<invIds.length;i+=400){var b=db.batch();invIds.slice(i,i+400).forEach(function(id){var x=d.inv[id];ST.inv[id]=x;b.set(uref().collection('inv').doc(id),Object.assign({},x,{u:FV.serverTimestamp()}))});await commit(b,true)}
     if(!ST.cfg&&d.cfg){ST.cfg=d.cfg;var b2=db.batch();b2.set(metaRef('cfg'),{json:JSON.stringify(d.cfg),t:Date.now()});await commit(b2,true)}
     schedulePublish();return n+invIds.length}
 
