@@ -1,8 +1,26 @@
-[{
-  "relation": ["delegate_permission/common.handle_all_urls"],
-  "target": {
-    "namespace": "android_app",
-    "package_name": "io.github.simo_langno.twa",
-    "sha256_cert_fingerprints": ["CF:9B:B5:18:4A:2B:20:CB:47:5F:10:29:E2:3B:2E:0F:14:69:3C:D9:B4:0F:FA:C3:19:A2:16:10:ED:E1:00:9B"]
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.savy.myapp",
+      "sha256_cert_fingerprints": [
+        "CF:9B:B5:18:4A:2B:20:CB:47:5F:10:29:E2:3B:2E:0F:14:69:3C:D9:B4:0F:FA:C3:19:A2:16:10:ED:E1:00:9B"
+      ]
+    }
+  },
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "io.github.simo_langno.twa",
+      "sha256_cert_fingerprints": [
+        "CF:9B:B5:18:4A:2B:20:CB:47:5F:10:29:E2:3B:2E:0F:14:69:3C:D9:B4:0F:FA:C3:19:A2:16:10:ED:E1:00:9B"
+      ]
+    }
   }
-}]
+]
