@@ -1125,8 +1125,8 @@ function drawSheet(){const host=document.getElementById("sheetHost");const s=S.s
   if(!s){host.innerHTML="";document.body.style.overflow="";if(S._hs){S._hs=false;try{history.back()}catch(e){}}return}
   if(!S._hs){S._hs=true;try{history.pushState({sh:1},"")}catch(e){}}
   document.body.style.overflow="hidden";
-  const dlg=["accsel","fix","period","delacc"].includes(s.kind);
-  const body={tx:sheetTx,cat:sheetCat,acc:sheetAcc,fix:sheetFix,imp:sheetImp,accsel:sheetAccSel,delacc:sheetDelAcc,period:sheetPeriod,ric:sheetRic,prom:sheetProm,card:sheetCard,cardshow:sheetCardShow,exp:sheetExp,bud:sheetBud}[s.kind](s);
+  const dlg=["accsel","fix","period","delacc","deltx"].includes(s.kind);
+  const body={tx:sheetTx,cat:sheetCat,acc:sheetAcc,fix:sheetFix,imp:sheetImp,accsel:sheetAccSel,delacc:sheetDelAcc,deltx:sheetDelTx,period:sheetPeriod,ric:sheetRic,prom:sheetProm,card:sheetCard,cardshow:sheetCardShow,exp:sheetExp,bud:sheetBud}[s.kind](s);
   host.innerHTML='<div class="overlay'+(dlg?" center":"")+'" data-close="1"><div class="'+(dlg?"dlg":"sheet")+'" role="dialog" aria-modal="true">'+body+"</div></div>"}
 function closeSheet(){S.sheet=null;drawSheet()}
 const X_BTN='<button type="button" class="round" data-act="close" aria-label="Chiudi">'+ico("X")+"</button>";
@@ -1208,6 +1208,8 @@ function sheetFix(s){const cur=balances(TODAY).get(s.n)||0;
 async function submitFix(){const s=S.sheet;const v=parseAmount(document.getElementById("fixV").value);if(!isFinite(v)){s.err="Scrivi il saldo, ad esempio 1250,00.";return drawSheet()}
   const c=clone();const a=c.accs.find(x=>x.n===s.n);if(!a)return closeSheet();const cur=balances(TODAY).get(s.n)||0;a.init=Math.round(((+a.init||0)+(v-cur))*100)/100;
   closeSheet();await write(B.saveCfg(c),"Saldo aggiornato");render()}
+function sheetDelTx(s){const x=S.items.get(s.id)||{};const d=[x.c,x.v!=null?String(x.v).replace(".",",")+" €":"",x.d].filter(Boolean).join(" · ");
+  return '<div style="display:contents"><h2 class="dlg-t">Eliminare il movimento?</h2><p class="dlg-sub">'+esc(d)+(x.n?"<br>"+esc(x.n):"")+'<br>Non si può annullare.</p><div class="dlg-actions"><button type="button" class="tbtn" data-act="close">Annulla</button><button type="button" class="tbtn" data-act="deltxgo">Elimina</button></div></div>'}
 function openDelAcc(){S.sheet={kind:"delacc",err:"",busy:false};drawSheet()}
 function sheetDelAcc(s){return '<div style="display:contents"><h2 class="dlg-t">Elimina account</h2><p class="dlg-sub">Verranno cancellati per sempre tutti i tuoi movimenti, investimenti, carte fedeltà, impostazioni e l\'account stesso. Non si può annullare. Se ti servono, scarica prima i dati da Impostazioni.</p>'+
    '<label class="field"><span class="flabel">Scrivi ELIMINA per confermare</span><input class="input" id="delT" autocomplete="off" autocapitalize="characters" spellcheck="false"'+(s.busy?" disabled":"")+'></label><p class="err">'+esc(s.err||"")+'</p>'+
@@ -1566,6 +1568,7 @@ document.addEventListener("click",async e=>{const t=e.target;const q=s=>t.closes
     if(t.classList&&t.classList.contains("overlay")){closeSheet();return}
     if(q('[data-act="close"]')){closeSheet();return}
     if(s.kind==="delacc"){if(q('[data-act="delgo"]'))doDelAcc();return}
+    if(s.kind==="deltx"){if(q('[data-act="deltxgo"]')){const id=s.id;closeSheet();await write(B.delTx(id),"Movimento eliminato");render()}return}
     if(s.kind==="card"){
       if(el=q("[data-ccol]")){readCard();s.k=el.dataset.ccol;drawSheet();return}
       if(q('[data-act="cardscan"]')){cardScan();return}
@@ -1580,7 +1583,7 @@ document.addEventListener("click",async e=>{const t=e.target;const q=s=>t.closes
       if(el=q("[data-toacc]")){readTx();s.to=el.dataset.toacc;drawSheet();return}
       if(el=q("[data-day]")){readTx();s.d=el.dataset.day;drawSheet();return}
       if(q('[data-act="txagain"]')){submitTx(true);return}
-      if(q('[data-act="txdel"]')){readTx();if(!s.confirm){s.confirm=true;drawSheet();return}const id=s.id;closeSheet();await write(B.delTx(id),"Movimento eliminato");render();return}}
+      if(q('[data-act="txdel"]')){S.sheet={kind:"deltx",id:s.id};drawSheet();return}}
     if(s.kind==="cat"||s.kind==="acc"){
       if(el=q("[data-col]")){s.kind==="cat"?readCat():readAcc();s.k=el.dataset.col;drawSheet();return}
       if(el=q("[data-icon]")){s.kind==="cat"?readCat():readAcc();s.i=el.dataset.icon;drawSheet();return}
