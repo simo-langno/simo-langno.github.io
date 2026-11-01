@@ -1316,7 +1316,7 @@ function openCard(id){const c=id?cardList().find(x=>x.id===id):null;S.sheet={kin
 function readCard(){const s=S.sheet;if(!s||s.kind!=="card")return;const g=i=>document.getElementById(i);if(g("cN"))s.n=g("cN").value;if(g("cC"))s.code=g("cC").value;if(g("cF"))s.f=g("cF").value}
 function sheetCard(s){return '<form id="cardForm" style="display:contents" autocomplete="off"><div class="sheet-h"><h2>'+(s.id?"Modifica carta":"Nuova carta")+"</h2>"+X_BTN+"</div>"+
   '<div class="field"><label for="cN">Nome del negozio</label><input class="input" id="cN" value="'+esc(s.n)+'" placeholder="Es. Esselunga"></div>'+
-  '<div class="actions" style="margin:0"><button type="button" class="btn primary grow" data-act="cardscan">'+ico("Camera",16)+"Inquadra il codice</button><button type=\"button\" class=\"btn grow\" data-act=\"cardphoto\">Da una foto</button></div>"+
+  '<div class="actions" style="margin:0"><button type="button" class="btn primary grow" data-act="cardscan">'+ico("Camera",16)+"Inquadra il codice</button><button type=\"button\" class=\"btn grow\" data-act=\"cardphoto\">Dalla galleria</button></div>"+
   '<div class="field"><label for="cC">Numero del codice</label><input class="input" id="cC" inputmode="text" value="'+esc(s.code)+'" placeholder="Si compila da solo con la scansione"></div>'+
   '<div class="field"><label for="cF">Tipo di codice</label><select class="input" id="cF">'+CARD_FMT.map(([k,l])=>'<option value="'+k+'"'+(s.f===k?" selected":"")+">"+l+"</option>").join("")+"</select></div>"+
   '<div class="field"><label>Colore</label><div class="chips">'+["blue","green","teal","purple","pink","red","orange","amber","slate"].map(k=>'<button type="button" class="chip" data-ccol="'+k+'" aria-pressed="'+(s.k===k)+'" style="--c:var(--k-'+k+')"><span class="ci sm" style="--c:var(--k-'+k+')"></span></button>').join("")+"</div></div>"+
@@ -1339,15 +1339,15 @@ function applyScan(b){const s=S.sheet;if(!s||s.kind!=="card")return;let raw=Stri
   s.code=raw;s.f=f;s.err="";drawSheet();toast("Codice letto")}
 function scanStop(){const x=SC;SC=null;window.removeEventListener("popstate",scanStop);if(!x)return;x.alive=false;try{x.stream.getTracks().forEach(t=>t.stop())}catch(e){}if(x.ov.parentNode)x.ov.parentNode.removeChild(x.ov)}
 async function cardScan(){const det=await cardDet();if(!det)return;readCard();
-  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){toast("Fotocamera non disponibile: usa “Da una foto”.");return}
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){toast("Fotocamera non disponibile: usa “Dalla galleria”.");return}
   const ov=document.createElement("div");ov.id="scanOv";ov.innerHTML='<video playsinline muted autoplay></video><p>Inquadra il codice a barre</p><button class="btn" data-act="scanstop">Annulla</button>';document.body.appendChild(ov);
-  let stream;try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"},width:{ideal:1280}},audio:false})}catch(e){ov.remove();toast("Non riesco ad aprire la fotocamera: consenti l'accesso oppure usa “Da una foto”.");return}
+  let stream;try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"},width:{ideal:1280}},audio:false})}catch(e){ov.remove();toast("Non riesco ad aprire la fotocamera: consenti l'accesso oppure usa “Dalla galleria”.");return}
   const v=ov.querySelector("video");v.srcObject=stream;try{await v.play()}catch(e){}
   SC={stream,ov,alive:true};window.addEventListener("popstate",scanStop);
   const loop=async()=>{if(!SC||!SC.alive)return;try{const r=await det.detect(v);if(r&&r.length){const b=r[0];scanStop();applyScan(b);return}}catch(e){}setTimeout(loop,160)};loop()}
 async function cardPhoto(){const det=await cardDet();if(!det)return;readCard();
-  const i=document.createElement("input");i.type="file";i.accept="image/*";i.setAttribute("capture","environment");
-  i.onchange=async()=>{const f=i.files&&i.files[0];if(!f)return;try{const bmp=await createImageBitmap(f);const r=await det.detect(bmp);if(r&&r.length)applyScan(r[0]);else toast("Codice non riconosciuto: avvicinati, con più luce, e riprova.")}catch(e){toast("Non riesco a leggere la foto.")}};i.click()}
+  const i=document.createElement("input");i.type="file";i.accept="image/*";
+  i.onchange=async()=>{const f=i.files&&i.files[0];if(!f)return;try{const bmp=await createImageBitmap(f);let r=await det.detect(bmp);if(!(r&&r.length)){for(const w of [1600,1000,2400]){const k=Math.min(1,w/Math.max(bmp.width,bmp.height));const cv=document.createElement("canvas");cv.width=Math.round(bmp.width*k);cv.height=Math.round(bmp.height*k);cv.getContext("2d").drawImage(bmp,0,0,cv.width,cv.height);r=await det.detect(cv);if(r&&r.length)break}}if(r&&r.length)applyScan(r[0]);else toast("Codice non riconosciuto nella foto: scegline una più nitida o scrivi il numero.")}catch(e){toast("Non riesco a leggere la foto.")}};i.click()}
 
 /* ================= import ================= */
 const LIBS={pdfjs:"https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js",xlsx:"https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js",jspdf:"https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js",autotable:"https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.4/dist/jspdf.plugin.autotable.min.js"};
