@@ -503,26 +503,19 @@ main.main{padding-top:12px;padding-bottom:24px}
 }
 @media (max-width:600px){.ptabs button{font-size:13px;padding:8px 4px}.accbal .amt{font-size:38px}.htitle{font-size:26px}}
 
-/* ======== LAYOUT 3: classifica (beta) ======== */
-@media (max-width:900px){
-.hdr:has(.homerow) .accbal .amt{font-size:54px;font-weight:700;letter-spacing:-.05em}
-.hdr:has(.homerow) .ttabs{display:flex;width:100%;box-sizing:border-box;margin-top:14px;background:var(--sunk)}
-.hdr:has(.homerow) .ttabs button{flex:1}
-.home{display:flex;flex-direction:column;gap:14px}
-.home-left{position:static;gap:14px}
-.home-right{display:flex;flex-direction:column;gap:10px}
-.dcard{padding:12px 14px 10px}
-.donut-area>*{max-width:190px;margin-inline:auto}
-.ccard{position:relative;overflow:hidden;background:var(--card);border-radius:20px;box-shadow:0 1px 3px rgba(15,35,66,.06),0 8px 22px rgba(15,35,66,.07)}
-.ccard::before{content:"";position:absolute;left:0;top:0;bottom:0;width:var(--p,0%);background:color-mix(in srgb,var(--accent) 30%,transparent);border-radius:0 20px 20px 0}
-.ccard-h{position:relative;display:grid;grid-template-columns:auto minmax(0,1fr) auto;grid-template-areas:"b n v" "b p v";gap:2px 12px;align-items:center;align-content:center;width:100%;padding:12px 14px;border:0;background:none;color:inherit;text-align:left;min-height:64px}
-.ccard-h>:first-child{grid-area:b}
-.ccard-h .cn{grid-area:n;font-size:16px;font-weight:700;overflow-wrap:anywhere}
-.ccard-h .cp{grid-area:p;justify-self:start;text-align:left;width:auto;margin:0;font-size:13px;font-weight:600;color:var(--muted)}
-.ccard-h .cv{grid-area:v;font-size:19px;font-weight:700;letter-spacing:-.02em}
-.ccard-h .chev{display:none}
-.card{border:0;border-radius:24px}
-}
+/* ======== LAYOUT 4: anello + azioni (beta) ======== */
+.hnew{display:flex;flex-direction:column;gap:14px}
+.hacts{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.hact{min-height:58px;border:1px solid var(--line);border-radius:20px;font:700 16px var(--f);display:flex;align-items:center;justify-content:center;gap:8px}
+.hact.out{background:var(--out-soft);color:var(--out)}
+.hact.in{background:var(--in-soft);color:var(--in)}
+.htiles{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x proximity;margin:0 -20px;padding:2px 20px 8px;scrollbar-width:none}
+.htiles::-webkit-scrollbar{display:none}
+.htile{flex:0 0 138px;scroll-snap-align:start;border:0;border-radius:24px;background:var(--card);box-shadow:var(--shadow);padding:14px;display:flex;flex-direction:column;align-items:flex-start;gap:6px;text-align:left;color:var(--ink)}
+.htile .cn{font-weight:600;font-size:14px;overflow-wrap:anywhere}
+.htile .amt{font-size:20px;letter-spacing:-.02em}
+.htile .cp{font-size:12.5px;color:var(--muted);font-weight:600}
+.card{border:0;border-radius:26px}
 </style>
 
 <nav class="bnav" id="bnav" aria-label="Sezioni"></nav>
@@ -866,7 +859,7 @@ function bigDonut(arr,tot,t,fut){
 function txMini(x){const sub=cap(fmtDate(x.d,{weekday:"long",day:"numeric",month:"long",year:x.d.slice(0,4)===TODAY.slice(0,4)?undefined:"numeric"}))+(S.acc?"":" · "+esc(x.a));const t1=x.n||x.c;
   return '<button class="tx'+(isFut(x)?" fut":"")+'" data-edit="'+esc(x.id)+'"><span class="d">'+sd(x.d)+(x.d.slice(0,4)!==TODAY.slice(0,4)?"<br>"+x.d.slice(0,4):"")+'</span><span class="m"><span class="t1">'+esc(t1)+(isFut(x)?'<span class="pill fut">Previsto</span>':"")+"</span>"+(sub?'<span class="t2">'+sub+"</span>":"")+'</span><span class="amt '+(x.t==="E"?"c-in":"")+'">'+signed(x.v,x.t)+"</span></button>"}
 function catCard(e,tot,list,t){const key=t+"|"+e.n;
-  return '<div class="ccard" style="--p:'+Math.max(3,Math.round(e.v/tot*100))+'%"><button class="ccard-h" data-catpage="'+esc(key)+'" aria-label="Apri '+esc(e.n)+'">'+badge(e,"lg")+'<span class="cn">'+esc(e.n)+'</span><span class="cp">'+pctI(e.v/tot)+'</span><span class="cv amt">'+short(e.v)+'</span><span class="chev">'+ico("ChevronRight",18)+"</span></button></div>"}
+  return '<div class="ccard"><button class="ccard-h" data-catpage="'+esc(key)+'" aria-label="Apri '+esc(e.n)+'">'+badge(e,"lg")+'<span class="cn">'+esc(e.n)+'</span><span class="cp">'+pctI(e.v/tot)+'</span><span class="cv amt">'+short(e.v)+'</span><span class="chev">'+ico("ChevronRight",18)+"</span></button></div>"}
 function openCatPage(t,n){S.cd={t,n,g:(S.cd&&S.cd.g)||"m",all:false};if(S.view!=="catdet")S.back=S.view;nav("catdet")}
 function wkStart(d){const x=pd(d);const k=(x.getDay()+6)%7;x.setDate(x.getDate()-k);return iso(x)}
 function vCatDet(){const cd=S.cd;if(!cd)return '<div class="narrow"><p class="muted">Categoria non trovata.</p></div>';const {t,n}=cd;const info=catInfo(t,n);
@@ -890,7 +883,13 @@ function alertsHtml(which){which=which||"both";const pr=which==="ric"?[]:duePro(
   return h}
 
 /* ================= views ================= */
-function vHome(){const r=range();const list=scopedSE(inRange(r));const t=S.type;const {arr,tot}=catAgg(list,t);const fut=sumT(list.filter(isFut),t);
+function vHomeNew(){const r=range();const list=scopedSE(inRange(r));const t=S.type;const {arr,tot}=catAgg(list,t);const fut=sumT(list.filter(isFut),t);
+  const tiles=arr.length?'<div class="htiles">'+arr.map(e=>'<button class="htile" data-catpage="'+esc(t+"|"+e.n)+'">'+badge(e,"lg")+'<span class="cn">'+esc(e.n)+'</span><b class="amt">'+short(e.v)+'</b><span class="cp">'+pctI(e.v/tot)+"</span></button>").join("")+"</div>":"";
+  const acts=S.ro?"":'<div class="hacts"><button class="hact out" data-act="newS">'+ico("Plus",18)+'Spesa</button><button class="hact in" data-act="newE">'+ico("Plus",18)+"Entrata</button></div>";
+  const rec=list.filter(x=>!isFut(x)).sort((a,b)=>b.d.localeCompare(a.d)||String(b.id).localeCompare(String(a.id))).slice(0,6);
+  return '<div class="hnew"><section class="card dcard">'+periodBar()+'<div class="donut-area">'+bigDonut(arr,tot,t,fut)+"</div></section>"+acts+tiles+budgetCard()+alertsHtml()+
+   '<section class="card"><div class="card-h"><h2>Ultimi movimenti</h2><button class="lnk" data-nav="movimenti">Tutti'+ico("ChevronRight",16)+"</button></div>"+(rec.length?'<div class="rows">'+rec.map(txRow).join("")+"</div>":'<p class="muted" style="margin:0">Nessun movimento in questo periodo.</p>')+"</section>"+upcomingCard()+"</div>"}
+function vHome(){if(window.innerWidth<=900)return vHomeNew();const r=range();const list=scopedSE(inRange(r));const t=S.type;const {arr,tot}=catAgg(list,t);const fut=sumT(list.filter(isFut),t);
   const card='<section class="card dcard">'+periodBar()+'<div class="donut-area">'+bigDonut(arr,tot,t,fut)+"</div>"+"</section>";
   const items=arr.length?arr.map(e=>catCard(e,tot,list,t)).join(""):'<div class="card empty-card">'+ico(t==="S"?"ShoppingBasket":"Banknote",30)+"<p>Nessuna "+(t==="S"?"spesa":"entrata")+(S.acc?" su "+esc(S.acc):"")+" in questo periodo.</p>"+(S.ro?"":'<button class="btn" data-act="new">'+ico("Plus",16)+(t==="S"?"Aggiungi una spesa":"Aggiungi un'entrata")+"</button>")+"</div>";
   return '<div class="home"><div class="home-left">'+card+budgetCard()+alertsHtml()+'</div><div class="home-right">'+items+upcomingCard()+"</div></div>"}
@@ -1677,6 +1676,7 @@ document.addEventListener("click",async e=>{const t=e.target;const q=s=>t.closes
   if(el=q("[data-cardshow]")){S.sheet={kind:"cardshow",id:el.dataset.cardshow};drawSheet();return}
   if(el=q("[data-prodone]")){promDone(el.dataset.prodone);return}
   const a=q("[data-act]");if(!a)return;const act=a.dataset.act;
+  if(act==="newS"||act==="newE"){S.type=act==="newE"?"E":"S";lsSet("type",S.type);openTx(null);return}
   if(act==="new")openTx(null);
   else if(act==="newT")openTx(null,{t:"T"});
   else if(act==="theme"){const t=lsGet("theme","auto");const n=THEMES[(THEMES.findIndex(a=>a[0]===t)+1)%3];lsSet("theme",n[0]);applyTheme();render();toast("Aspetto: "+n[1].toLowerCase())}
