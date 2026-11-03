@@ -502,6 +502,27 @@ main.main{padding-top:12px;padding-bottom:24px}
   .inv-form{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 @media (max-width:600px){.ptabs button{font-size:13px;padding:8px 4px}.accbal .amt{font-size:38px}.htitle{font-size:26px}}
+
+/* ======== LAYOUT MODERNO (beta) ======== */
+@media (max-width:900px){
+.hdr:has(.homerow){background:var(--brand);color:#fff;border-radius:0 0 36px 36px;padding-bottom:22px;margin-bottom:4px}
+.hdr:has(.homerow) .hb,.hdr:has(.homerow) .accbal .amt{color:#fff}
+.hdr:has(.homerow) .accname{background:rgba(255,255,255,.18);color:#fff;border-color:transparent}
+.hdr:has(.homerow) .accbal .amt{font-size:46px;font-weight:700;letter-spacing:-.04em}
+.hdr:has(.homerow) .hdr-actions .hb{background:rgba(255,255,255,.18);border-color:transparent;color:#fff}
+.hdr:has(.homerow) .ttabs{background:rgba(255,255,255,.18);display:flex;width:100%;box-sizing:border-box;margin-top:16px}
+.hdr:has(.homerow) .ttabs button{color:#fff;flex:1}
+.hdr:has(.homerow) .ttabs button[aria-selected="true"]{background:#fff;color:var(--brand);box-shadow:none}
+.hdr:has(.homerow) .ttabs .invtab{flex:0 0 46px;border-left:0}
+.bnav{left:12px;right:12px;bottom:calc(10px + env(safe-area-inset-bottom,0px));border:1px solid var(--line);border-radius:30px;padding:6px 6px;box-shadow:0 10px 30px rgba(15,35,66,.22);background:color-mix(in srgb,var(--card) 96%,transparent)}
+.shell{padding-bottom:calc(112px + env(safe-area-inset-bottom,0px))}
+}
+.card{border:0;border-radius:28px;padding:18px;box-shadow:0 2px 6px rgba(15,35,66,.05),0 14px 34px rgba(15,35,66,.08)}
+.row{border-radius:18px;padding:12px 10px}
+.rows .row:hover{background:var(--hover)}
+.badge,.cbadge{border-radius:16px}
+.btn.primary{box-shadow:0 6px 16px color-mix(in srgb,var(--accent) 35%,transparent)}
+.sheet{border-radius:32px 32px 0 0}
 </style>
 
 <nav class="bnav" id="bnav" aria-label="Sezioni"></nav>
@@ -1125,8 +1146,8 @@ function drawSheet(){const host=document.getElementById("sheetHost");const s=S.s
   if(!s){host.innerHTML="";document.body.style.overflow="";if(S._hs){S._hs=false;try{history.back()}catch(e){}}return}
   if(!S._hs){S._hs=true;try{history.pushState({sh:1},"")}catch(e){}}
   document.body.style.overflow="hidden";
-  const dlg=["accsel","fix","period","delacc"].includes(s.kind);
-  const body={tx:sheetTx,cat:sheetCat,acc:sheetAcc,fix:sheetFix,imp:sheetImp,accsel:sheetAccSel,delacc:sheetDelAcc,period:sheetPeriod,ric:sheetRic,prom:sheetProm,card:sheetCard,cardshow:sheetCardShow,exp:sheetExp,bud:sheetBud}[s.kind](s);
+  const dlg=["accsel","fix","period","delacc","deltx","delc"].includes(s.kind);
+  const body={tx:sheetTx,cat:sheetCat,acc:sheetAcc,fix:sheetFix,imp:sheetImp,accsel:sheetAccSel,delacc:sheetDelAcc,deltx:sheetDelTx,delc:sheetDelC,period:sheetPeriod,ric:sheetRic,prom:sheetProm,card:sheetCard,cardshow:sheetCardShow,exp:sheetExp,bud:sheetBud}[s.kind](s);
   host.innerHTML='<div class="overlay'+(dlg?" center":"")+'" data-close="1"><div class="'+(dlg?"dlg":"sheet")+'" role="dialog" aria-modal="true">'+body+"</div></div>"}
 function closeSheet(){S.sheet=null;drawSheet()}
 const X_BTN='<button type="button" class="round" data-act="close" aria-label="Chiudi">'+ico("X")+"</button>";
@@ -1208,6 +1229,11 @@ function sheetFix(s){const cur=balances(TODAY).get(s.n)||0;
 async function submitFix(){const s=S.sheet;const v=parseAmount(document.getElementById("fixV").value);if(!isFinite(v)){s.err="Scrivi il saldo, ad esempio 1250,00.";return drawSheet()}
   const c=clone();const a=c.accs.find(x=>x.n===s.n);if(!a)return closeSheet();const cur=balances(TODAY).get(s.n)||0;a.init=Math.round(((+a.init||0)+(v-cur))*100)/100;
   closeSheet();await write(B.saveCfg(c),"Saldo aggiornato");render()}
+function sheetDelTx(s){const x=S.items.get(s.id)||{};const d=[x.c,x.v!=null?String(x.v).replace(".",",")+" €":"",x.d].filter(Boolean).join(" · ");
+  return '<div style="display:contents"><h2 class="dlg-t">Eliminare il movimento?</h2><p class="dlg-sub">'+esc(d)+(x.n?"<br>"+esc(x.n):"")+'<br>Non si può annullare.</p><div class="dlg-actions"><button type="button" class="tbtn" data-act="close">Annulla</button><button type="button" class="tbtn" data-act="deltxgo">Elimina</button></div></div>'}
+let DELFN=null;
+function askDel(title,msg,fn){DELFN=fn;S.sheet={kind:"delc",title,msg};drawSheet()}
+function sheetDelC(s){return '<div style="display:contents"><h2 class="dlg-t">'+esc(s.title)+'</h2><p class="dlg-sub">'+esc(s.msg||"")+(s.msg?"<br>":"")+'Non si può annullare.</p><div class="dlg-actions"><button type="button" class="tbtn" data-act="close">Annulla</button><button type="button" class="tbtn" data-act="delcgo">Elimina</button></div></div>'}
 function openDelAcc(){S.sheet={kind:"delacc",err:"",busy:false};drawSheet()}
 function sheetDelAcc(s){return '<div style="display:contents"><h2 class="dlg-t">Elimina account</h2><p class="dlg-sub">Verranno cancellati per sempre tutti i tuoi movimenti, investimenti, carte fedeltà, impostazioni e l\'account stesso. Non si può annullare. Se ti servono, scarica prima i dati da Impostazioni.</p>'+
    '<label class="field"><span class="flabel">Scrivi ELIMINA per confermare</span><input class="input" id="delT" autocomplete="off" autocapitalize="characters" spellcheck="false"'+(s.busy?" disabled":"")+'></label><p class="err">'+esc(s.err||"")+'</p>'+
@@ -1316,7 +1342,7 @@ function openCard(id){const c=id?cardList().find(x=>x.id===id):null;S.sheet={kin
 function readCard(){const s=S.sheet;if(!s||s.kind!=="card")return;const g=i=>document.getElementById(i);if(g("cN"))s.n=g("cN").value;if(g("cC"))s.code=g("cC").value;if(g("cF"))s.f=g("cF").value}
 function sheetCard(s){return '<form id="cardForm" style="display:contents" autocomplete="off"><div class="sheet-h"><h2>'+(s.id?"Modifica carta":"Nuova carta")+"</h2>"+X_BTN+"</div>"+
   '<div class="field"><label for="cN">Nome del negozio</label><input class="input" id="cN" value="'+esc(s.n)+'" placeholder="Es. Esselunga"></div>'+
-  '<div class="actions" style="margin:0"><button type="button" class="btn primary grow" data-act="cardscan">'+ico("Camera",16)+"Inquadra il codice</button><button type=\"button\" class=\"btn grow\" data-act=\"cardphoto\">Da una foto</button></div>"+
+  '<div class="actions" style="margin:0"><button type="button" class="btn primary grow" data-act="cardscan">'+ico("Camera",16)+"Inquadra il codice</button><button type=\"button\" class=\"btn grow\" data-act=\"cardphoto\">Dalla galleria</button></div>"+
   '<div class="field"><label for="cC">Numero del codice</label><input class="input" id="cC" inputmode="text" value="'+esc(s.code)+'" placeholder="Si compila da solo con la scansione"></div>'+
   '<div class="field"><label for="cF">Tipo di codice</label><select class="input" id="cF">'+CARD_FMT.map(([k,l])=>'<option value="'+k+'"'+(s.f===k?" selected":"")+">"+l+"</option>").join("")+"</select></div>"+
   '<div class="field"><label>Colore</label><div class="chips">'+["blue","green","teal","purple","pink","red","orange","amber","slate"].map(k=>'<button type="button" class="chip" data-ccol="'+k+'" aria-pressed="'+(s.k===k)+'" style="--c:var(--k-'+k+')"><span class="ci sm" style="--c:var(--k-'+k+')"></span></button>').join("")+"</div></div>"+
@@ -1339,15 +1365,15 @@ function applyScan(b){const s=S.sheet;if(!s||s.kind!=="card")return;let raw=Stri
   s.code=raw;s.f=f;s.err="";drawSheet();toast("Codice letto")}
 function scanStop(){const x=SC;SC=null;window.removeEventListener("popstate",scanStop);if(!x)return;x.alive=false;try{x.stream.getTracks().forEach(t=>t.stop())}catch(e){}if(x.ov.parentNode)x.ov.parentNode.removeChild(x.ov)}
 async function cardScan(){const det=await cardDet();if(!det)return;readCard();
-  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){toast("Fotocamera non disponibile: usa “Da una foto”.");return}
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){toast("Fotocamera non disponibile: usa “Dalla galleria”.");return}
   const ov=document.createElement("div");ov.id="scanOv";ov.innerHTML='<video playsinline muted autoplay></video><p>Inquadra il codice a barre</p><button class="btn" data-act="scanstop">Annulla</button>';document.body.appendChild(ov);
-  let stream;try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"},width:{ideal:1280}},audio:false})}catch(e){ov.remove();toast("Non riesco ad aprire la fotocamera: consenti l'accesso oppure usa “Da una foto”.");return}
+  let stream;try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"},width:{ideal:1280}},audio:false})}catch(e){ov.remove();toast("Non riesco ad aprire la fotocamera: consenti l'accesso oppure usa “Dalla galleria”.");return}
   const v=ov.querySelector("video");v.srcObject=stream;try{await v.play()}catch(e){}
   SC={stream,ov,alive:true};window.addEventListener("popstate",scanStop);
   const loop=async()=>{if(!SC||!SC.alive)return;try{const r=await det.detect(v);if(r&&r.length){const b=r[0];scanStop();applyScan(b);return}}catch(e){}setTimeout(loop,160)};loop()}
 async function cardPhoto(){const det=await cardDet();if(!det)return;readCard();
-  const i=document.createElement("input");i.type="file";i.accept="image/*";i.setAttribute("capture","environment");
-  i.onchange=async()=>{const f=i.files&&i.files[0];if(!f)return;try{const bmp=await createImageBitmap(f);const r=await det.detect(bmp);if(r&&r.length)applyScan(r[0]);else toast("Codice non riconosciuto: avvicinati, con più luce, e riprova.")}catch(e){toast("Non riesco a leggere la foto.")}};i.click()}
+  const i=document.createElement("input");i.type="file";i.accept="image/*";
+  i.onchange=async()=>{const f=i.files&&i.files[0];if(!f)return;try{const bmp=await createImageBitmap(f);let r=await det.detect(bmp);if(!(r&&r.length)){for(const w of [1600,1000,2400]){const k=Math.min(1,w/Math.max(bmp.width,bmp.height));const cv=document.createElement("canvas");cv.width=Math.round(bmp.width*k);cv.height=Math.round(bmp.height*k);cv.getContext("2d").drawImage(bmp,0,0,cv.width,cv.height);r=await det.detect(cv);if(r&&r.length)break}}if(r&&r.length)applyScan(r[0]);else toast("Codice non riconosciuto nella foto: scegline una più nitida o scrivi il numero.")}catch(e){toast("Non riesco a leggere la foto.")}};i.click()}
 
 /* ================= import ================= */
 const LIBS={pdfjs:"https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js",xlsx:"https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js",jspdf:"https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js",autotable:"https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.4/dist/jspdf.plugin.autotable.min.js"};
@@ -1566,11 +1592,13 @@ document.addEventListener("click",async e=>{const t=e.target;const q=s=>t.closes
     if(t.classList&&t.classList.contains("overlay")){closeSheet();return}
     if(q('[data-act="close"]')){closeSheet();return}
     if(s.kind==="delacc"){if(q('[data-act="delgo"]'))doDelAcc();return}
+    if(s.kind==="delc"){if(q('[data-act="delcgo"]')){const f=DELFN;DELFN=null;closeSheet();if(f)await f()}return}
+    if(s.kind==="deltx"){if(q('[data-act="deltxgo"]')){const id=s.id;closeSheet();await write(B.delTx(id),"Movimento eliminato");render()}return}
     if(s.kind==="card"){
       if(el=q("[data-ccol]")){readCard();s.k=el.dataset.ccol;drawSheet();return}
       if(q('[data-act="cardscan"]')){cardScan();return}
       if(q('[data-act="cardphoto"]')){cardPhoto();return}
-      if(q('[data-act="carddel"]')){readCard();if(!s.confirm){s.confirm=true;drawSheet();return}const id=s.id;closeSheet();await cfgUpdate(c=>{c.cards=(c.cards||[]).filter(x=>x.id!==id)},"Carta eliminata");return}}
+      if(q('[data-act="carddel"]')){readCard();const id=s.id;askDel("Eliminare la carta?",s.n,()=>cfgUpdate(c=>{c.cards=(c.cards||[]).filter(x=>x.id!==id)},"Carta eliminata"));return}}
     if(s.kind==="cardshow"&&q('[data-act="cardedit"]')){openCard(s.id);return}
     if(s.kind==="tx"){
       if(el=q(".types button")){readTx();s.t=el.dataset.t;s.err="";if(s.t!=="T"&&s.c&&!catList(s.t,true).some(x=>x.n===s.c))s.c="";if(s.t==="T"&&!s.to){const o=visibleAccs().find(a=>a.n!==s.a);s.to=o?o.n:""}drawSheet();return}
@@ -1580,12 +1608,12 @@ document.addEventListener("click",async e=>{const t=e.target;const q=s=>t.closes
       if(el=q("[data-toacc]")){readTx();s.to=el.dataset.toacc;drawSheet();return}
       if(el=q("[data-day]")){readTx();s.d=el.dataset.day;drawSheet();return}
       if(q('[data-act="txagain"]')){submitTx(true);return}
-      if(q('[data-act="txdel"]')){readTx();if(!s.confirm){s.confirm=true;drawSheet();return}const id=s.id;closeSheet();await write(B.delTx(id),"Movimento eliminato");render();return}}
+      if(q('[data-act="txdel"]')){S.sheet={kind:"deltx",id:s.id};drawSheet();return}}
     if(s.kind==="cat"||s.kind==="acc"){
       if(el=q("[data-col]")){s.kind==="cat"?readCat():readAcc();s.k=el.dataset.col;drawSheet();return}
       if(el=q("[data-icon]")){s.kind==="cat"?readCat():readAcc();s.i=el.dataset.icon;drawSheet();return}
-      if(q('[data-act="catdel"]')){closeSheet();await cfgUpdate(c=>{c.cats[s.t]=c.cats[s.t].filter(x=>x.n!==s.orig);if(c.budget)delete c.budget[s.orig]},"Categoria eliminata");return}
-      if(q('[data-act="accdel"]')){closeSheet();await cfgUpdate(c=>{c.accs=c.accs.filter(x=>x.n!==s.orig)},"Conto eliminato");return}}
+      if(q('[data-act="catdel"]')){const t=s.t,o=s.orig;askDel("Eliminare la categoria?",o,()=>cfgUpdate(c=>{c.cats[t]=c.cats[t].filter(x=>x.n!==o);if(c.budget)delete c.budget[o]},"Categoria eliminata"));return}
+      if(q('[data-act="accdel"]')){const o=s.orig;askDel("Eliminare il conto?",o,()=>cfgUpdate(c=>{c.accs=c.accs.filter(x=>x.n!==o)},"Conto eliminato"));return}}
     if(s.kind==="accsel"){
       if(el=q("[data-accpick]")){s.sel=el.dataset.accpick;drawSheet();return}
       if(q('[data-act="accselok"]')){S.acc=s.sel;S.hideBal=s.hide;lsSet("acc",S.acc);lsSet("hide",S.hideBal);S.open.clear();closeSheet();render();return}}
@@ -1598,8 +1626,8 @@ document.addEventListener("click",async e=>{const t=e.target;const q=s=>t.closes
       if(el=q("[data-rt]")){readRic();s.t=el.dataset.rt;if(s.c&&!catList(s.t,true).some(x=>x.n===s.c))s.c="";drawSheet();return}
       if(el=q("[data-rpick]")){readRic();s.c=el.dataset.rpick;drawSheet();return}
       if(el=q("[data-racc]")){readRic();s.a=el.dataset.racc;drawSheet();return}
-      if(q('[data-act="ricdel"]')){readRic();if(!s.confirm){s.confirm=true;drawSheet();return}closeSheet();await cfgUpdate(c=>{c.ric=c.ric.filter(x=>x.id!==s.id)},"Pagamento regolare eliminato");return}}
-    if(s.kind==="prom"&&q('[data-act="promdel"]')){if(!s.confirm){const g=i=>document.getElementById(i);s.t=g("pT").value;s.d=g("pD").value;s.rip=g("pR").value;s.confirm=true;drawSheet();return}closeSheet();await cfgUpdate(c=>{c.prom=c.prom.filter(x=>x.id!==s.id)},"Promemoria eliminato");return}
+      if(q('[data-act="ricdel"]')){readRic();const id=s.id,m=[s.c,s.n].filter(Boolean).join(" · ");askDel("Eliminare il pagamento regolare?",m,()=>cfgUpdate(c=>{c.ric=c.ric.filter(x=>x.id!==id)},"Pagamento regolare eliminato"));return}}
+    if(s.kind==="prom"&&q('[data-act="promdel"]')){const id=s.id,t=document.getElementById("pT")?document.getElementById("pT").value:s.t;askDel("Eliminare il promemoria?",t,()=>cfgUpdate(c=>{c.prom=c.prom.filter(x=>x.id!==id)},"Promemoria eliminato"));return}
     if(s.kind==="imp"&&q('[data-act="impgo"]')){doImport();return}
     if(s.kind==="bud"){
       if(el=q("[data-budscope]")){readBud();s.scope=el.dataset.budscope;s.err="";drawSheet();return}
@@ -1619,7 +1647,7 @@ document.addEventListener("click",async e=>{const t=e.target;const q=s=>t.closes
   if(el=q("[data-cdall]")){S.cd.all=el.dataset.cdall==="1";render();return}
   if(el=q("[data-invb]")){S.invB=el.dataset.invb;render();return}
   if(el=q("[data-pdfon]")){const r=S.pdf&&S.pdf.rows[+el.dataset.pdfon];if(r){r.on=!r.on;render()}return}
-  if(el=q("[data-delfile]")){if(el.dataset.armed){const [b,f]=el.dataset.delfile.split("\u0001");const ids=[...S.inv.entries()].filter(([,i])=>i&&i.file===f&&(i.broker||"")===b).map(x=>x[0]);await write(Promise.all(ids.map(id=>B.delInv(id))),"Estratto eliminato");render()}else{el.dataset.armed="1";el.textContent="Conferma";setTimeout(()=>{delete el.dataset.armed;el.textContent="Elimina"},3000)}return}
+  if(el=q("[data-delfile]")){const [b,f]=el.dataset.delfile.split("\u0001");askDel("Eliminare l'estratto?",f+(b?" · "+b:""),async()=>{const ids=[...S.inv.entries()].filter(([,i])=>i&&i.file===f&&(i.broker||"")===b).map(x=>x[0]);await write(Promise.all(ids.map(id=>B.delInv(id))),"Estratto eliminato");render()});return}
   if(el=q("[data-nav]")){nav(el.dataset.nav);return}
   if(el=q("[data-toggle]")){const k=el.dataset.toggle;if(S.open.has(k))S.open.delete(k);else S.open.add(k);render();return}
   if(el=q("[data-edit]")){openTx(el.dataset.edit);return}
@@ -1639,7 +1667,7 @@ document.addEventListener("click",async e=>{const t=e.target;const q=s=>t.closes
   if(el=q("[data-budset]")){openCat("S",el.dataset.budset);setTimeout(()=>{const i=document.getElementById("catB");if(i)i.focus()},40);return}
   if(el=q("[data-bud]")){const d=pd(S.budMonth+"-01");S.budMonth=iso(new Date(d.getFullYear(),d.getMonth()+(+el.dataset.bud),1)).slice(0,7);render();return}
   if(el=q("[data-invy]")){S.invYear+=+el.dataset.invy;render();return}
-  if(el=q("[data-delinv]")){if(el.dataset.armed){await write(B.delInv(el.dataset.delinv),"Vendita eliminata");render()}else{el.dataset.armed="1";el.textContent="Conferma";setTimeout(()=>{if(el.isConnected){delete el.dataset.armed;el.textContent="Elimina"}},3500)}return}
+  if(el=q("[data-delinv]")){const id=el.dataset.delinv,i=S.inv.get(id)||{};askDel("Eliminare la vendita?",i.titolo||"",async()=>{await write(B.delInv(id),"Vendita eliminata");render()});return}
   if(el=q("[data-ricedit]")){openRic(el.dataset.ricedit);return}
   if(el=q("[data-budnav]")){S.budMonth=el.dataset.budnav;nav("budget");return}
   if(el=q("[data-copy]")){copyText(el.dataset.copy);return}
