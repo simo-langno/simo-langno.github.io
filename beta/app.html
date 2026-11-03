@@ -503,42 +503,25 @@ main.main{padding-top:12px;padding-bottom:24px}
 }
 @media (max-width:600px){.ptabs button{font-size:13px;padding:8px 4px}.accbal .amt{font-size:38px}.htitle{font-size:26px}}
 
-/* ======== LAYOUT MODERNO (beta) ======== */
+/* ======== LAYOUT 3: classifica (beta) ======== */
 @media (max-width:900px){
-.hdr:has(.homerow){background:var(--brand);color:#fff;border-radius:0 0 36px 36px;padding-bottom:22px;margin-bottom:4px}
-.hdr:has(.homerow) .hb,.hdr:has(.homerow) .accbal .amt{color:#fff}
-.hdr:has(.homerow) .accname{background:rgba(255,255,255,.18);color:#fff;border-color:transparent}
-.hdr:has(.homerow) .accbal .amt{font-size:46px;font-weight:700;letter-spacing:-.04em}
-.hdr:has(.homerow) .hdr-actions .hb{background:rgba(255,255,255,.18);border-color:transparent;color:#fff}
-.hdr:has(.homerow) .ttabs{background:rgba(255,255,255,.18);display:flex;width:100%;box-sizing:border-box;margin-top:16px}
-.hdr:has(.homerow) .ttabs button{color:#fff;flex:1}
-.hdr:has(.homerow) .ttabs button[aria-selected="true"]{background:#fff;color:var(--brand);box-shadow:none}
-.hdr:has(.homerow) .ttabs .invtab{flex:0 0 46px;border-left:0}
-.bnav{left:12px;right:12px;bottom:calc(10px + env(safe-area-inset-bottom,0px));border:1px solid var(--line);border-radius:30px;padding:6px 6px;box-shadow:0 10px 30px rgba(15,35,66,.22);background:color-mix(in srgb,var(--card) 96%,transparent)}
-.shell{padding-bottom:calc(112px + env(safe-area-inset-bottom,0px))}
-}
-.card{border:0;border-radius:28px;padding:18px;box-shadow:0 2px 6px rgba(15,35,66,.05),0 14px 34px rgba(15,35,66,.08)}
-.row{border-radius:18px;padding:12px 10px}
-.rows .row:hover{background:var(--hover)}
-.badge,.cbadge{border-radius:16px}
-.btn.primary{box-shadow:0 6px 16px color-mix(in srgb,var(--accent) 35%,transparent)}
-.sheet{border-radius:32px 32px 0 0}
-
-/* ======== LAYOUT 2: tessere (beta) ======== */
-@media (max-width:900px){
+.hdr:has(.homerow) .accbal .amt{font-size:54px;font-weight:700;letter-spacing:-.05em}
+.hdr:has(.homerow) .ttabs{display:flex;width:100%;box-sizing:border-box;margin-top:14px;background:var(--sunk)}
+.hdr:has(.homerow) .ttabs button{flex:1}
 .home{display:flex;flex-direction:column;gap:14px}
 .home-left{position:static;gap:14px}
-.home-right{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
-.home-right>.upc,.home-right>.empty-card{grid-column:1/-1}
-.ccard{background:var(--card);border-radius:26px;box-shadow:0 2px 6px rgba(15,35,66,.05),0 14px 34px rgba(15,35,66,.08);min-width:0}
-.ccard-h{display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-areas:"b p" "n n" "v v";gap:10px 8px;align-items:center;width:100%;padding:16px;border:0;background:none;color:inherit;text-align:left;min-height:132px;align-content:space-between}
+.home-right{display:flex;flex-direction:column;gap:10px}
+.dcard{padding:12px 14px 10px}
+.donut-area>*{max-width:190px;margin-inline:auto}
+.ccard{position:relative;overflow:hidden;background:var(--card);border-radius:20px;box-shadow:0 1px 3px rgba(15,35,66,.06),0 8px 22px rgba(15,35,66,.07)}
+.ccard::before{content:"";position:absolute;left:0;top:0;bottom:0;width:var(--p,0%);background:color-mix(in srgb,var(--accent) 16%,transparent);border-radius:0 20px 20px 0}
+.ccard-h{position:relative;display:grid;grid-template-columns:auto minmax(0,1fr) auto;grid-template-areas:"b n v" "b p v";gap:0 12px;align-items:center;width:100%;padding:12px 14px;border:0;background:none;color:inherit;text-align:left;min-height:64px}
 .ccard-h>:first-child{grid-area:b}
-.ccard-h .cp{grid-area:p;justify-self:end;font-size:13px;font-weight:700;color:var(--muted);background:var(--sunk);border-radius:999px;padding:3px 9px}
-.ccard-h .cn{grid-area:n;font-size:15px;font-weight:600;overflow-wrap:anywhere}
-.ccard-h .cv{grid-area:v;font-size:22px;font-weight:700;letter-spacing:-.02em}
+.ccard-h .cn{grid-area:n;font-size:16px;font-weight:700;overflow-wrap:anywhere}
+.ccard-h .cp{grid-area:p;font-size:13px;font-weight:600;color:var(--muted)}
+.ccard-h .cv{grid-area:v;font-size:19px;font-weight:700;letter-spacing:-.02em}
 .ccard-h .chev{display:none}
-.dcard{padding:14px 14px 10px}
-.donut-area>*{max-width:250px;margin-inline:auto}
+.card{border:0;border-radius:24px}
 }
 </style>
 
@@ -883,7 +866,7 @@ function bigDonut(arr,tot,t,fut){
 function txMini(x){const sub=cap(fmtDate(x.d,{weekday:"long",day:"numeric",month:"long",year:x.d.slice(0,4)===TODAY.slice(0,4)?undefined:"numeric"}))+(S.acc?"":" · "+esc(x.a));const t1=x.n||x.c;
   return '<button class="tx'+(isFut(x)?" fut":"")+'" data-edit="'+esc(x.id)+'"><span class="d">'+sd(x.d)+(x.d.slice(0,4)!==TODAY.slice(0,4)?"<br>"+x.d.slice(0,4):"")+'</span><span class="m"><span class="t1">'+esc(t1)+(isFut(x)?'<span class="pill fut">Previsto</span>':"")+"</span>"+(sub?'<span class="t2">'+sub+"</span>":"")+'</span><span class="amt '+(x.t==="E"?"c-in":"")+'">'+signed(x.v,x.t)+"</span></button>"}
 function catCard(e,tot,list,t){const key=t+"|"+e.n;
-  return '<div class="ccard"><button class="ccard-h" data-catpage="'+esc(key)+'" aria-label="Apri '+esc(e.n)+'">'+badge(e,"lg")+'<span class="cn">'+esc(e.n)+'</span><span class="cp">'+pctI(e.v/tot)+'</span><span class="cv amt">'+short(e.v)+'</span><span class="chev">'+ico("ChevronRight",18)+"</span></button></div>"}
+  return '<div class="ccard" style="--p:'+Math.max(3,Math.round(e.v/tot*100))+'%"><button class="ccard-h" data-catpage="'+esc(key)+'" aria-label="Apri '+esc(e.n)+'">'+badge(e,"lg")+'<span class="cn">'+esc(e.n)+'</span><span class="cp">'+pctI(e.v/tot)+'</span><span class="cv amt">'+short(e.v)+'</span><span class="chev">'+ico("ChevronRight",18)+"</span></button></div>"}
 function openCatPage(t,n){S.cd={t,n,g:(S.cd&&S.cd.g)||"m",all:false};if(S.view!=="catdet")S.back=S.view;nav("catdet")}
 function wkStart(d){const x=pd(d);const k=(x.getDay()+6)%7;x.setDate(x.getDate()-k);return iso(x)}
 function vCatDet(){const cd=S.cd;if(!cd)return '<div class="narrow"><p class="muted">Categoria non trovata.</p></div>';const {t,n}=cd;const info=catInfo(t,n);
