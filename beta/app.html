@@ -523,6 +523,23 @@ main.main{padding-top:12px;padding-bottom:24px}
 .badge,.cbadge{border-radius:16px}
 .btn.primary{box-shadow:0 6px 16px color-mix(in srgb,var(--accent) 35%,transparent)}
 .sheet{border-radius:32px 32px 0 0}
+
+/* ======== LAYOUT 2: tessere (beta) ======== */
+@media (max-width:900px){
+.home{display:flex;flex-direction:column;gap:14px}
+.home-left{position:static;gap:14px}
+.home-right{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.home-right>.upc,.home-right>.empty-card{grid-column:1/-1}
+.ccard{background:var(--card);border-radius:26px;box-shadow:0 2px 6px rgba(15,35,66,.05),0 14px 34px rgba(15,35,66,.08);min-width:0}
+.ccard-h{display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-areas:"b p" "n n" "v v";gap:10px 8px;align-items:center;width:100%;padding:16px;border:0;background:none;color:inherit;text-align:left;min-height:132px;align-content:space-between}
+.ccard-h>:first-child{grid-area:b}
+.ccard-h .cp{grid-area:p;justify-self:end;font-size:13px;font-weight:700;color:var(--muted);background:var(--sunk);border-radius:999px;padding:3px 9px}
+.ccard-h .cn{grid-area:n;font-size:15px;font-weight:600;overflow-wrap:anywhere}
+.ccard-h .cv{grid-area:v;font-size:22px;font-weight:700;letter-spacing:-.02em}
+.ccard-h .chev{display:none}
+.dcard{padding:14px 14px 10px}
+.donut-area>*{max-width:250px;margin-inline:auto}
+}
 </style>
 
 <nav class="bnav" id="bnav" aria-label="Sezioni"></nav>
